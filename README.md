@@ -9,5 +9,12 @@ Project is created with:
 
 ## Setup
 * Install requirements: `pip install -r requirements.txt`
+
+
+* Create `.env` file with settings in the project root directory according to the example in `.env.dist`
+
+
 * Apply migrations: `python .\todolist\manage.py migrate`
+
+
 * Run server: `python .\todolist\manage.py runserver`
