@@ -4,6 +4,7 @@ from django.contrib.auth.admin import UserAdmin
 from core.models import User
 
 
+@admin.register(User)
 class CustomUserAdmin(UserAdmin):
     """
     ModelAdmin class for User model customizing the displayed fields
@@ -25,4 +26,4 @@ class CustomUserAdmin(UserAdmin):
     readonly_fields = ('date_joined', 'last_login')
 
 
-admin.site.register(User, CustomUserAdmin)
+# admin.site.register(User, CustomUserAdmin)
