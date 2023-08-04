@@ -5,6 +5,9 @@ from core.models import User
 
 
 class CustomUserAdmin(UserAdmin):
+    """
+    ModelAdmin class for User model customizing the displayed fields
+    """
     list_display = ('username', 'email', 'first_name', 'last_name')
     fieldsets = (
         (None, {'fields': (
@@ -20,12 +23,6 @@ class CustomUserAdmin(UserAdmin):
         )}),
     )
     readonly_fields = ('date_joined', 'last_login')
-    add_fieldsets = (
-        (None, {
-            "classes": ("wide",),
-            "fields": ("password1", "password2"),
-        }),
-    )
 
 
 admin.site.register(User, CustomUserAdmin)
