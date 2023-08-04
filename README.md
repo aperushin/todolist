@@ -15,7 +15,7 @@ Project is created with:
 * Create `.env` file in the project root directory according to the example in `.env.dist`
 
 
-* Run `docker-compose -f .\todolist-postgres\docker-compose.yaml up -d` to create a docker container with a database
+* Run `docker-compose up -d` to create a docker container with a database
 
 
 * Apply migrations: `python .\todolist\manage.py migrate`
