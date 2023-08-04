@@ -20,9 +20,13 @@ env = environ.Env(
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+ENV_FILE = BASE_DIR.parent.joinpath('.env')
 
 # Take environment variables from .env file
-environ.Env.read_env(os.path.join(BASE_DIR.parent, '.env'))
+if ENV_FILE.exists() and ENV_FILE.is_file():
+    environ.Env.read_env(ENV_FILE)
+else:
+    raise FileNotFoundError('File .env does not exist. Refer to README.md for the setup instructions')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
