@@ -9,7 +9,7 @@ Project is created with:
 * Docker Compose version: v2.19.1
 
 ## Setup
-* Install requirements: `pip install -r requirements.txt`
+* Install requirements: `poetry install`
 
 
 * Create `.env` file in the project root directory according to the example in `.env.dist`
