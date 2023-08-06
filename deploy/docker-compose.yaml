@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    restart: always
+    volumes:
+    - todolist_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  api:
+    image: aperushin/todolist:latest
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    image: sermalenk/skypro-front:lesson-34
+    depends_on:
+      api:
+        condition: service_started
+    restart: always
+    ports:
+      - "80:80"
+
+volumes:
+  todolist_pg_data:
