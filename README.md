@@ -9,4 +9,7 @@ Project is created with:
 * Docker Compose version: v2.19.1
 
 ### How to run
+* Create `.env` file in the project root directory according to the example in `.env.dist`
+
+
 * Run `docker-compose up -d`
