@@ -34,7 +34,7 @@ FROM base_image as prod_image
 RUN pip install -r /tmp/requirements.txt
 
 # Run server
-CMD ["gunicorn", "todolist.wsgi", "-w", "2", "-b", "0.0.0.0:8000"]
+CMD ["gunicorn", "todolist.todolist.wsgi", "-w", "2", "-b", "0.0.0.0:8000"]
 
 FROM base_image as dev_image
 
