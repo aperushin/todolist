@@ -26,14 +26,29 @@ services:
         condition: service_healthy
     restart: always
 
+  collect_static:
+    build:
+      target: dev_image
+    env_file: .env
+    entrypoint: ''
+    volumes:
+      - django_static:/code/todolist/static/
+    command: python /code/todolist/manage.py collectstatic -c --no-input
+
   frontend:
     image: sermalenk/skypro-front:lesson-34
     depends_on:
       api:
         condition: service_started
+      collect_static:
+        condition: service_completed_successfully
     restart: always
     ports:
       - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf
+      - django_static:/usr/share/nginx/html/static
 
 volumes:
   todolist_pg_data:
+  django_static:
