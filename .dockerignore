@@ -1,0 +1,9 @@
+# Ignore all
+**
+
+# Except
+!todolist/**
+!entrypoint.sh
+!poetry.lock
+!pyproject.toml
+!deploy/**

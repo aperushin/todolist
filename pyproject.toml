@@ -10,7 +10,12 @@ python = "^3.10"
 django = "^4.2.4"
 django-environ = "^0.10.0"
 psycopg2 = "^2.9.6"
+gunicorn = "^21.2.0"
 
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.3.3"
+ansible-vault-win = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core"]
