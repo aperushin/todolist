@@ -1,57 +1,54 @@
-import json
+from typing import Any
 
+from django.db.models import QuerySet
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.contrib.auth import login, logout
 from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView
-from django.views.decorators.http import require_POST
-from django.contrib.auth import authenticate, login, logout
-from django.http import JsonResponse
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.serializers import BaseSerializer
 
 from core.models import User
-from core.serializers import UserCreateSerializer, UserRetrieveUpdateSerializer, UserPasswordUpdateSerializer
+from core.serializers import (
+    UserCreateSerializer, ProfileSerializer, UpdatePasswordSerializer, LoginSerializer,
+)
 
 
-@csrf_exempt
-@require_POST
-def login_view(request):
-    login_data = json.loads(request.body)
-    username = login_data.get('username')
-    password = login_data.get('password')
+class LoginView(CreateAPIView):
+    serializer_class: BaseSerializer = LoginSerializer
 
-    user = authenticate(request, username=username, password=password)
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        serializer: LoginSerializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-    if user is not None:
-        login(request, user)
-        return JsonResponse(login_data, status=201)
-
-    return JsonResponse({'message': 'Invalid login'}, status=401)
+        login(request=request, user=serializer.save())
+        return Response(serializer.data)
 
 
 class UserCreateView(CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserCreateSerializer
+    queryset: QuerySet = User.objects.all()
+    serializer_class: BaseSerializer = UserCreateSerializer
 
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
-class UserRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserRetrieveUpdateSerializer
-    permission_classes = [IsAuthenticated]
+class ProfileView(RetrieveUpdateDestroyAPIView):
+    serializer_class: BaseSerializer = ProfileSerializer
+    permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
 
     def get_object(self):
         return self.request.user
 
     def destroy(self, request, *args, **kwargs):
         logout(request)
-        return JsonResponse({}, status=204)
+        return Response(status=204)
 
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
-class UserPasswordUpdateView(UpdateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserPasswordUpdateSerializer
-    permission_classes = [IsAuthenticated]
+class UpdatePasswordView(UpdateAPIView):
+    serializer_class: BaseSerializer = UpdatePasswordSerializer
+    permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
 
     def get_object(self):
         return self.request.user
