@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 
@@ -13,18 +14,15 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email', 'password', 'password_repeat']
 
-    def validate(self, args):
+    def validate(self, args: dict) -> dict:
         if self.initial_data['password'] != self.initial_data['password_repeat']:
             raise serializers.ValidationError({'password_repeat': ['Passwords do not match']})
 
         return args
 
-    def create(self, validated_data):
-        user = User.objects.create(**validated_data)
-
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
+    def create(self, validated_data: dict) -> User:
+        validated_data['password'] = make_password(validated_data['password'])
+        return super().create(validated_data)
 
 
 class UserRetrieveUpdateSerializer(serializers.ModelSerializer):
@@ -39,16 +37,16 @@ class UserPasswordUpdateSerializer(serializers.Serializer):
     new_password = serializers.CharField(max_length=128, validators=[validate_password])
     old_password = serializers.CharField(max_length=128)
 
-    def validate_old_password(self, value):
+    def validate_old_password(self, value: str) -> str:
         if not self.instance.check_password(value):
             raise serializers.ValidationError('Old password is incorrect')
 
         return value
 
-    def update(self, instance, validated_data):
+    def update(self, instance: User, validated_data: dict) -> User:
         self.instance.set_password(validated_data['new_password'])
         self.instance.save()
         return self.instance
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: User) -> dict:
         return self.validated_data
