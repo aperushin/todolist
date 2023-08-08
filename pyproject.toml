@@ -11,6 +11,7 @@ django = "^4.2.4"
 django-environ = "^0.10.0"
 psycopg2 = "^2.9.6"
 gunicorn = "^21.2.0"
+djangorestframework = "^3.14.0"
 
 
 [tool.poetry.group.dev.dependencies]

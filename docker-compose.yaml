@@ -43,7 +43,7 @@ services:
     command: python /code/todolist/manage.py collectstatic -c --no-input
 
   frontend:
-    image: sermalenk/skypro-front:lesson-34
+    image: sermalenk/skypro-front:lesson-35
     depends_on:
       api:
         condition: service_started
