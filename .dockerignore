@@ -7,3 +7,7 @@
 !poetry.lock
 !pyproject.toml
 !deploy/**
+
+# Ignore in subfolders
+/todolist/tests/**
+/todolist/pytest.ini
