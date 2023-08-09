@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'social_django',
+    'django_filters',
 
     # First party apps
     'core',
