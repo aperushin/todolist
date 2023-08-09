@@ -18,6 +18,8 @@ social-auth-app-django = "^5.2.0"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.3.3"
 ansible-vault-win = "^1.0.0"
+pytest-django = "^4.5.2"
+pytest-factoryboy = "^2.5.1"
 
 [build-system]
 requires = ["poetry-core"]
