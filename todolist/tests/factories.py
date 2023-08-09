@@ -1,7 +1,9 @@
 import factory
 from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 
 from core.models import User, UserRoles
+from goals.models import GoalCategory
 
 USER_PASSWORD = '123afafa'
 
@@ -17,3 +19,14 @@ class UserFactory(factory.django.DjangoModelFactory):
     last_name = factory.Faker('name')
     role = UserRoles.USER
     is_active = True
+
+
+class GoalCategoryFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = GoalCategory
+
+    title = 'Test category title'
+    user = factory.SubFactory(UserFactory)
+    is_deleted = False
+    created = timezone.now()
+    updated = timezone.now()
