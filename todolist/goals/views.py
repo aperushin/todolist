@@ -58,7 +58,7 @@ class GoalListView(ListAPIView):
     permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
     serializer_class: BaseSerializer = GoalSerializer
 
-    filter_backends: tuple[BaseFilterBackend, ...] = (OrderingFilter, DjangoFilterBackend)
+    filter_backends: tuple[BaseFilterBackend, ...] = (OrderingFilter, SearchFilter, DjangoFilterBackend)
     filterset_class = GoalFilter
     ordering_fields: tuple[str, ...] = ('title', 'created')
     ordering: tuple[str, ...] = ('title', )
