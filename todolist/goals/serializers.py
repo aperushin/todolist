@@ -30,7 +30,7 @@ class GoalSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created', 'updated', 'user')
         fields = '__all__'
 
-    def validate_category(self, category):
+    def validate_category(self, category: GoalCategory) -> GoalCategory:
         if category.is_deleted:
             raise serializers.ValidationError('Cannot use a deleted category')
 
@@ -52,7 +52,7 @@ class GoalCommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('id', 'created', 'updated', 'user')
 
-    def validate_goal(self, goal):
+    def validate_goal(self, goal: Goal) -> Goal:
         if goal.user != self.context['request'].user:
             raise serializers.ValidationError('Not an owner of this goal')
 
