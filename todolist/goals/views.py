@@ -46,7 +46,6 @@ class GoalCategoryView(RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance: GoalCategory):
         instance.is_deleted = True
         instance.save()
-        return instance
 
 
 class GoalCreateView(CreateAPIView):
@@ -79,7 +78,6 @@ class GoalView(RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance: Goal):
         instance.status = Status.archived
         instance.save()
-        return instance
 
 
 class GoalCommentCreateView(CreateAPIView):
