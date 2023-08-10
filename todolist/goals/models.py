@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.core.validators import MinLengthValidator
 
 from core.models import User
 
@@ -62,3 +63,13 @@ class Goal(DatesModelMixin):
     class Meta:
         verbose_name = _('Goal')
         verbose_name_plural = _('Goals')
+
+
+class GoalComment(DatesModelMixin):
+    text = models.TextField(verbose_name=_('Text'), validators=[MinLengthValidator(1)])
+    user = models.ForeignKey(User, verbose_name=_('Author'), on_delete=models.PROTECT)
+    goal = models.ForeignKey(Goal, verbose_name=_('Goal'), on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = _('Comment')
+        verbose_name_plural = _('Comments')
