@@ -5,7 +5,7 @@ from tests.factories import UserFactory, USER_PASSWORD, GoalCategoryFactory
 @pytest.mark.django_db
 def test_list_category(client, user: UserFactory):
     """
-    Test successfully getting category list
+    Test successfully getting paginated category list
     """
     client.login(username=user.username, password=USER_PASSWORD)
 
@@ -20,7 +20,7 @@ def test_list_category(client, user: UserFactory):
         'previous': None,
     }
 
-    response = client.get('/goals/goal_category/list')
+    response = client.get('/goals/goal_category/list?limit=10')
     results = response.data.pop('results')
 
     assert response.data == expected_response
