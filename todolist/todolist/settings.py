@@ -71,7 +71,6 @@ REST_FRAMEWORK = {
         'social_core.backends.google.GoogleOAuth2',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 10,
 }
 
 ROOT_URLCONF = 'todolist.urls'
