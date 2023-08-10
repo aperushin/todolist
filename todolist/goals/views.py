@@ -5,8 +5,15 @@ from rest_framework.serializers import BaseSerializer
 from rest_framework.filters import OrderingFilter, SearchFilter, BaseFilterBackend
 from django_filters.rest_framework import DjangoFilterBackend
 
-from goals.models import GoalCategory, Goal, Status
-from goals.serializers import GoalCategoryCreateSerializer, GoalCategorySerializer, GoalCreateSerializer, GoalSerializer
+from goals.models import GoalCategory, Goal, Status, GoalComment
+from goals.serializers import (
+    GoalCategoryCreateSerializer,
+    GoalCategorySerializer,
+    GoalCreateSerializer,
+    GoalSerializer,
+    GoalCommentCreateSerializer,
+    GoalCommentSerializer,
+)
 from goals.filters import GoalFilter
 
 
@@ -73,3 +80,30 @@ class GoalView(RetrieveUpdateDestroyAPIView):
         instance.status = Status.archived
         instance.save()
         return instance
+
+
+class GoalCommentCreateView(CreateAPIView):
+    queryset: QuerySet = GoalComment.objects.all()
+    permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
+    serializer_class: BaseSerializer = GoalCommentCreateSerializer
+
+
+class GoalCommentListView(ListAPIView):
+    permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
+    serializer_class: BaseSerializer = GoalCommentSerializer
+
+    filter_backends: tuple[BaseFilterBackend, ...] = (OrderingFilter, DjangoFilterBackend)
+    ordering: tuple[str, ...] = ('-created', )
+    ordering_fields: tuple[str, ...] = ('created', 'updated')
+    filterset_fields: tuple[str, ...] = ('goal', )
+
+    def get_queryset(self):
+        return GoalComment.objects.filter(user=self.request.user)
+
+
+class GoalCommentView(RetrieveUpdateDestroyAPIView):
+    serializer_class: BaseSerializer = GoalCommentSerializer
+    permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
+
+    def get_queryset(self):
+        return GoalComment.objects.filter(user=self.request.user)
