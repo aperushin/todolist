@@ -6,7 +6,7 @@ from rest_framework.serializers import BaseSerializer
 from rest_framework.filters import OrderingFilter, SearchFilter, BaseFilterBackend
 from django_filters.rest_framework import DjangoFilterBackend
 
-from goals.models import GoalCategory, Goal, Status, GoalComment
+from goals.models import GoalCategory, Goal, GoalComment
 from goals.serializers import (
     GoalCategoryCreateSerializer,
     GoalCategorySerializer,
@@ -48,7 +48,7 @@ class GoalCategoryView(RetrieveUpdateDestroyAPIView):
         with transaction.atomic():
             instance.is_deleted = True
             instance.save()
-            instance.goals.update(status=Status.archived)
+            instance.goals.update(status=Goal.Status.archived)
 
 
 class GoalCreateView(CreateAPIView):
@@ -79,7 +79,7 @@ class GoalView(RetrieveUpdateDestroyAPIView):
         return Goal.objects.filter(user=self.request.user)
 
     def perform_destroy(self, instance: Goal):
-        instance.status = Status.archived
+        instance.status = instance.Status.archived
         instance.save()
 
 

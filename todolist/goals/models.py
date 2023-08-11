@@ -6,20 +6,6 @@ from django.core.validators import MinLengthValidator
 from core.models import User
 
 
-class Status(models.IntegerChoices):
-    to_do = 1, _('To do')
-    in_progress = 2, _('In progress')
-    done = 3, _('Done')
-    archived = 4, _('Archived')
-
-
-class Priority(models.IntegerChoices):
-    low = 1, _('Low')
-    medium = 2, _('Medium')
-    high = 3, _('High')
-    critical = 4, _('Critical')
-
-
 class DatesModelMixin(models.Model):
     created = models.DateTimeField(verbose_name=_('Created'))
     updated = models.DateTimeField(verbose_name=_('Updated'))
@@ -48,6 +34,18 @@ class GoalCategory(DatesModelMixin):
 
 
 class Goal(DatesModelMixin):
+    class Status(models.IntegerChoices):
+        to_do = 1, _('To do')
+        in_progress = 2, _('In progress')
+        done = 3, _('Done')
+        archived = 4, _('Archived')
+
+    class Priority(models.IntegerChoices):
+        low = 1, _('Low')
+        medium = 2, _('Medium')
+        high = 3, _('High')
+        critical = 4, _('Critical')
+
     title = models.CharField(verbose_name=_('Title'), max_length=255)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
     due_date = models.DateField(verbose_name=_('Due date'), null=True)
