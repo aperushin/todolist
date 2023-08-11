@@ -23,9 +23,35 @@ class DatesModelMixin(models.Model):
         return super().save(*args, **kwargs)
 
 
+class Board(DatesModelMixin):
+    title = models.CharField(verbose_name=_('Title'), max_length=255)
+    is_deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
+
+    class Meta:
+        verbose_name = _('Board')
+        verbose_name_plural = _('Boards')
+
+
+class BoardParticipant(DatesModelMixin):
+    class Role(models.IntegerChoices):
+        owner = 1, _('Owner')
+        writer = 2, _('Writer')
+        reader = 3, _('Reader')
+
+    board = models.ForeignKey(Board, verbose_name=_('Board'), on_delete=models.PROTECT, related_name='participants')
+    user = models.ForeignKey(User, verbose_name=_('User'), on_delete=models.PROTECT, related_name='participants')
+    role = models.PositiveSmallIntegerField(verbose_name=_('Role'), choices=Role.choices, default=Role.owner)
+
+    class Meta:
+        unique_together = ('board', 'user')
+        verbose_name = _('Participant')
+        verbose_name_plural = _('Participants')
+
+
 class GoalCategory(DatesModelMixin):
     title = models.CharField(verbose_name=_('Title'), max_length=255)
     user = models.ForeignKey(User, verbose_name=_('Author'), on_delete=models.PROTECT)
+    board = models.ForeignKey(Board, verbose_name=_('Board'), on_delete=models.PROTECT, related_name='categories')
     is_deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
 
     class Meta:
@@ -51,16 +77,11 @@ class Goal(DatesModelMixin):
     due_date = models.DateField(verbose_name=_('Due date'), null=True)
     user = models.ForeignKey(User, verbose_name=_('Author'), on_delete=models.PROTECT)
     category = models.ForeignKey(
-        to=GoalCategory,
-        verbose_name=_('Category'),
-        on_delete=models.PROTECT,
-        related_name='goals'
+        to=GoalCategory, verbose_name=_('Category'), on_delete=models.PROTECT, related_name='goals'
     )
     status = models.PositiveSmallIntegerField(verbose_name=_('Status'), choices=Status.choices, default=Status.to_do)
     priority = models.PositiveSmallIntegerField(
-        verbose_name=_('Priority'),
-        choices=Priority.choices,
-        default=Priority.medium
+        verbose_name=_('Priority'), choices=Priority.choices, default=Priority.medium
     )
 
     class Meta:
