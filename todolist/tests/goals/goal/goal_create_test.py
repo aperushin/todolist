@@ -1,11 +1,10 @@
 import pytest
-from django.utils import timezone
 
 from tests.factories import UserFactory, USER_PASSWORD, GoalCategoryFactory
 
 
 @pytest.mark.django_db
-def test_create_goal(client, user: UserFactory):
+def test_create_goal(client, user: UserFactory, helpers, formatted_now):
     """
     Test successful goal creation
     """
@@ -24,8 +23,8 @@ def test_create_goal(client, user: UserFactory):
 
     expected_response = {
         'category': category.id,
-        'created': timezone.now().strftime('%Y-%m-%dT%H:%M'),
-        'updated': timezone.now().strftime('%Y-%m-%dT%H:%M'),
+        'created': formatted_now,
+        'updated': formatted_now,
         'title': 'Test goal',
         'description': '',
         'due_date': '2124-08-09',
@@ -36,8 +35,7 @@ def test_create_goal(client, user: UserFactory):
     response = client.post('/goals/goal/create', data, format='json')
 
     response.data.pop('id')
-    response.data['created'] = response.data['created'][:-11]
-    response.data['updated'] = response.data['updated'][:-11]
+    helpers.trim_dates(response.data)
 
     assert response.data == expected_response
     assert response.status_code == 201
