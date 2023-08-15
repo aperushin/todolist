@@ -1,7 +1,86 @@
+from django.db import transaction
+from django.db.models import QuerySet
 from rest_framework import serializers
 
-from goals.models import GoalCategory, Goal, GoalComment
+from core.models import User
+from goals.models import GoalCategory, Goal, GoalComment, Board, BoardParticipant
 from core.serializers import ProfileSerializer
+
+
+class BoardCreateSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Board
+        read_only_fields = ('id', 'created', 'updated', 'is_deleted')
+        fields = '__all__'
+
+    def create(self, validated_data: dict) -> Board:
+        user: User = validated_data.pop('user')
+        board: Board = Board.objects.create(**validated_data)
+        BoardParticipant.objects.create(
+            user=user, board=board, role=BoardParticipant.Role.owner
+        )
+        return board
+
+
+class BoardParticipantSerializer(serializers.ModelSerializer):
+    role = serializers.ChoiceField(required=True, choices=BoardParticipant.Role.editable_choices)
+    user = serializers.SlugRelatedField(slug_field='username', queryset=User.objects.all())
+
+    class Meta:
+        model = BoardParticipant
+        fields = '__all__'
+        read_only_fields = ('id', 'created', 'updated', 'board')
+
+
+class BoardSerializer(serializers.ModelSerializer):
+    participants = BoardParticipantSerializer(many=True)
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Board
+        fields = '__all__'
+        read_only_fields = ('id', 'created', 'updated')
+
+    def update(self, instance: Board, validated_data: dict) -> Board:
+        owner: User = validated_data.pop('user')
+        new_participants: list[dict] = validated_data.pop('participants')
+        new_by_id: dict[int, dict] = {pa['user'].id: pa for pa in new_participants}
+
+        # Exclude the owner from the query since the board's owner should not be deleted
+        existing_participants: QuerySet = instance.participants.exclude(user=owner)
+        existing_by_id: dict[int, BoardParticipant] = {pa.user_id: pa for pa in existing_participants}
+
+        with transaction.atomic():
+            # Delete existing participants that are not in the new_participants
+            for uid, existing_participant in existing_by_id.items():
+                if uid not in new_by_id.keys():
+                    existing_participant.delete()
+
+            # Add new participants, change roles for the existing ones
+            for uid, participant_data in new_by_id.items():
+                role = participant_data['role']
+
+                if uid in existing_by_id.keys() and existing_by_id[uid].role != role:
+                    existing_by_id[uid].role = role
+                    existing_by_id[uid].save()
+                else:
+                    BoardParticipant.objects.create(
+                        user=participant_data['user'],
+                        board=instance,
+                        role=role,
+                    )
+
+        instance.title = validated_data['title']
+        instance.save()
+        return instance
+
+
+class BoardListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Board
+        fields = '__all__'
 
 
 class GoalCategorySerializer(serializers.ModelSerializer):
@@ -10,7 +89,7 @@ class GoalCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = GoalCategory
         fields = '__all__'
-        read_only_fields = ('id', 'created', 'updated', 'user', 'is_deleted')
+        read_only_fields = ('id', 'created', 'updated', 'user', 'board', 'is_deleted')
 
 
 class GoalCategoryCreateSerializer(serializers.ModelSerializer):

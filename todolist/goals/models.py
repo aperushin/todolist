@@ -38,6 +38,11 @@ class BoardParticipant(DatesModelMixin):
         writer = 2, _('Writer')
         reader = 3, _('Reader')
 
+        @classmethod
+        @property
+        def editable_choices(cls) -> list[tuple, tuple]:
+            return [(member.value, member.label) for member in cls if member != cls.owner]
+
     board = models.ForeignKey(Board, verbose_name=_('Board'), on_delete=models.PROTECT, related_name='participants')
     user = models.ForeignKey(User, verbose_name=_('User'), on_delete=models.PROTECT, related_name='participants')
     role = models.PositiveSmallIntegerField(verbose_name=_('Role'), choices=Role.choices, default=Role.owner)
