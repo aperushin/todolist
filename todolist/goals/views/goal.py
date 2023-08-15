@@ -12,7 +12,7 @@ from goals.serializers import GoalCreateSerializer, GoalSerializer
 
 class GoalCreateView(CreateAPIView):
     """
-    Create a new goal instance with the requesting user is an author
+    Create a new goal instance with the requesting user as an author
     """
     queryset: QuerySet = Goal.objects.all()
     permission_classes: tuple[BasePermission, ...] = (IsAuthenticated,)

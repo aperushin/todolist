@@ -11,7 +11,7 @@ from goals.serializers import GoalCommentCreateSerializer, GoalCommentSerializer
 
 class GoalCommentCreateView(CreateAPIView):
     """
-    Create a new comment instance with the requesting user is an author
+    Create a new comment instance with the requesting user as an author
     """
     queryset: QuerySet = GoalComment.objects.all()
     permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
