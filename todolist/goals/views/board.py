@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import QuerySet
+from rest_framework.filters import BaseFilterBackend, OrderingFilter
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.serializers import BaseSerializer
@@ -20,6 +21,8 @@ class BoardCreateView(CreateAPIView):
 class BoardListView(ListAPIView):
     permission_classes: tuple[BasePermission, ...] = (IsAuthenticated,)
     serializer_class: BaseSerializer = BoardListSerializer
+    filter_backends: tuple[BaseFilterBackend, ...] = (OrderingFilter, )
+    ordering: tuple[str, ...] = ('title', )
 
     def get_queryset(self) -> QuerySet:
         return Board.objects.filter(participants__user=self.request.user, is_deleted=False)
