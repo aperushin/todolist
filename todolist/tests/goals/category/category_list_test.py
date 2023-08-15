@@ -1,9 +1,10 @@
 import pytest
+from goals.models import Board, BoardParticipant
 from tests.factories import UserFactory, USER_PASSWORD, GoalCategoryFactory
 
 
 @pytest.mark.django_db
-def test_list_category(client, user: UserFactory):
+def test_list_category(client, user: UserFactory, board: Board, board_participant: BoardParticipant):
     """
     Test successfully getting paginated category list
     """
@@ -11,7 +12,7 @@ def test_list_category(client, user: UserFactory):
 
     category_count = 5
 
-    GoalCategoryFactory.create_batch(category_count, user=user)
+    GoalCategoryFactory.create_batch(category_count, user=user, board=board)
     GoalCategoryFactory.create_batch(1, user=user, is_deleted=True)
 
     expected_response = {

@@ -2,11 +2,11 @@ import pytest
 
 from tests.factories import USER_PASSWORD
 from core.models import User
-from goals.models import Board
+from goals.models import Board, BoardParticipant
 
 
 @pytest.mark.django_db
-def test_create_category(client, user: User, board: Board, formatted_now, helpers):
+def test_create_category(client, user: User, board: Board, formatted_now, helpers, board_participant: BoardParticipant):
     """
     Test successful category creation
     """

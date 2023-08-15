@@ -3,11 +3,13 @@ import pytest
 from tests.factories import USER_PASSWORD, GoalCategoryFactory
 from core.models import User
 from core.serializers import ProfileSerializer
-from goals.models import GoalCategory, Board
+from goals.models import GoalCategory, Board, BoardParticipant
 
 
 @pytest.mark.django_db
-def test_retrieve_category(client, user: User, board: Board, helpers, formatted_now):
+def test_retrieve_category(
+        client, user: User, board: Board, helpers, formatted_now, board_participant: BoardParticipant
+):
     """
     Test successfully getting a category
     """
