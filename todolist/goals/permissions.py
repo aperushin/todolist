@@ -1,15 +1,22 @@
 from rest_framework import permissions
 from rest_framework.request import Request
 
-from goals.models import BoardParticipant
+from goals.models import BoardParticipant, Board, GoalCategory
 
 
-class BoardPermission(permissions.BasePermission):
-    def has_object_permission(self, request: Request, view, obj) -> bool:
-        if not request.user.is_authenticated:
-            return False
+class BoardPermission(permissions.IsAuthenticated):
+    def has_object_permission(self, request: Request, view, obj: Board) -> bool:
+        _filters: dict = {'user_id': request.user.id, 'board_id': obj.id}
+        if request.method not in permissions.SAFE_METHODS:
+            _filters['role'] = BoardParticipant.Role.owner
 
-        if request.method in permissions.SAFE_METHODS:
-            return BoardParticipant.objects.filter(user=request.user, board=obj).exists()
+        return BoardParticipant.objects.filter(**_filters).exists()
 
-        return BoardParticipant.objects.filter(user=request.user, board=obj, role=BoardParticipant.Role.owner).exists()
+
+class CategoryPermission(permissions.IsAuthenticated):
+    def has_object_permission(self, request: Request, view, obj: GoalCategory) -> bool:
+        _filters: dict = {'user_id': request.user.id, 'board_id': obj.board_id}
+        if request.method not in permissions.SAFE_METHODS:
+            _filters['role__in'] = (BoardParticipant.Role.owner, BoardParticipant.Role.writer)
+
+        return BoardParticipant.objects.filter(**_filters).exists()
