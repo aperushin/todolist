@@ -8,20 +8,10 @@ from core.serializers import ProfileSerializer
 
 
 class BoardCreateSerializer(serializers.ModelSerializer):
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-
     class Meta:
         model = Board
         read_only_fields = ('id', 'created', 'updated', 'is_deleted')
         fields = '__all__'
-
-    def create(self, validated_data: dict) -> Board:
-        user: User = validated_data.pop('user')
-        board: Board = Board.objects.create(**validated_data)
-        BoardParticipant.objects.create(
-            user=user, board=board, role=BoardParticipant.Role.owner
-        )
-        return board
 
 
 class BoardParticipantSerializer(serializers.ModelSerializer):
@@ -41,7 +31,7 @@ class BoardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Board
         fields = '__all__'
-        read_only_fields = ('id', 'created', 'updated')
+        read_only_fields = ('id', 'created', 'updated', 'is_deleted')
 
     def update(self, instance: Board, validated_data: dict) -> Board:
         owner: User = validated_data.pop('user')
@@ -72,15 +62,10 @@ class BoardSerializer(serializers.ModelSerializer):
                         role=role,
                     )
 
-        instance.title = validated_data['title']
-        instance.save()
+        if title := validated_data['title']:
+            instance.title = title
+            instance.save()
         return instance
-
-
-class BoardListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Board
-        fields = '__all__'
 
 
 class GoalCategorySerializer(serializers.ModelSerializer):
@@ -99,6 +84,16 @@ class GoalCategoryCreateSerializer(serializers.ModelSerializer):
         model = GoalCategory
         read_only_fields = ('id', 'created', 'updated', 'user')
         fields = '__all__'
+
+    def validate(self, attrs):
+        if not BoardParticipant.objects.filter(
+            user_id=attrs['user'],
+            board_id=attrs['board'],
+            role__in=[BoardParticipant.Role.owner, BoardParticipant.Role.writer]
+        ).exists():
+            raise serializers.ValidationError('No permission to create categories on this board')
+
+        return attrs
 
 
 class GoalSerializer(serializers.ModelSerializer):

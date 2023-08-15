@@ -6,6 +6,7 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.serializers import BaseSerializer
 
 from goals.models import GoalCategory, Goal
+from goals.permissions import CategoryPermission
 from goals.serializers import GoalCategoryCreateSerializer, GoalCategorySerializer
 
 
@@ -31,7 +32,7 @@ class GoalCategoryListView(ListAPIView):
     search_fields: tuple[str, ...] = ('title', )
 
     def get_queryset(self) -> QuerySet:
-        return GoalCategory.objects.filter(user=self.request.user, is_deleted=False)
+        return GoalCategory.objects.filter(board__participants__user_id=self.request.user.id, is_deleted=False)
 
 
 class GoalCategoryView(RetrieveUpdateDestroyAPIView):
@@ -49,10 +50,10 @@ class GoalCategoryView(RetrieveUpdateDestroyAPIView):
     Set the given category's is_deleted flag to True, set the child goals' statuses to 'archived'
     """
     serializer_class: BaseSerializer = GoalCategorySerializer
-    permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
+    permission_classes: tuple[BasePermission, ...] = (CategoryPermission, )
 
     def get_queryset(self) -> QuerySet:
-        return GoalCategory.objects.filter(user=self.request.user, is_deleted=False)
+        return GoalCategory.objects.filter(board__participants__user_id=self.request.user.id, is_deleted=False)
 
     def perform_destroy(self, instance: GoalCategory) -> None:
         with transaction.atomic():

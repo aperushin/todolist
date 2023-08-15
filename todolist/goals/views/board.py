@@ -5,8 +5,9 @@ from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveUpdateDe
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.serializers import BaseSerializer
 
-from goals.models import Board, Goal
-from goals.serializers import BoardCreateSerializer, BoardSerializer, BoardListSerializer
+from goals.models import Board, Goal, BoardParticipant
+from goals.permissions import BoardPermission
+from goals.serializers import BoardCreateSerializer, BoardSerializer
 
 
 class BoardCreateView(CreateAPIView):
@@ -17,15 +18,18 @@ class BoardCreateView(CreateAPIView):
     permission_classes: tuple[BasePermission, ...] = (IsAuthenticated,)
     serializer_class: BaseSerializer = BoardCreateSerializer
 
+    def perform_create(self, serializer: BaseSerializer) -> None:
+        BoardParticipant.objects.create(user=self.request.user, board=serializer.save())
+
 
 class BoardListView(ListAPIView):
     permission_classes: tuple[BasePermission, ...] = (IsAuthenticated,)
-    serializer_class: BaseSerializer = BoardListSerializer
+    serializer_class: BaseSerializer = BoardCreateSerializer
     filter_backends: tuple[BaseFilterBackend, ...] = (OrderingFilter, )
     ordering: tuple[str, ...] = ('title', )
 
     def get_queryset(self) -> QuerySet:
-        return Board.objects.filter(participants__user=self.request.user, is_deleted=False)
+        return Board.objects.filter(participants__user_id=self.request.user.id, is_deleted=False)
 
 
 class BoardView(RetrieveUpdateDestroyAPIView):
@@ -43,7 +47,7 @@ class BoardView(RetrieveUpdateDestroyAPIView):
     Set the given board's is_deleted flag to True, update all child objects accordingly
     """
     serializer_class: BaseSerializer = BoardSerializer
-    permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
+    permission_classes: tuple[BasePermission, ...] = (BoardPermission, )
 
     def get_queryset(self) -> QuerySet:
         return Board.objects.filter(participants__user=self.request.user, is_deleted=False)
