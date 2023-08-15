@@ -9,25 +9,24 @@ def create_objects(apps, schema_editor):
     BoardParticipant = apps.get_model('goals', 'BoardParticipant')
     GoalCategory = apps.get_model('goals', 'GoalCategory')
 
+    now = timezone.now()
+
     with transaction.atomic():
-        for user in User.objects.all():
+        for user_id in User.objects.values_list('id', flat=True):
             # Create a new board for each user
-            new_board = Board.objects.create(
-                title='My goals',
-                created=timezone.now(),
-                updated=timezone.now(),
-            )
+            new_board = Board.objects.create(title='My goals', created=now, updated=now)
+
             # Create an owner participant for this board
             BoardParticipant.objects.create(
-                user=user,
+                user_id=user_id,
                 board=new_board,
                 role=1,  # 1 == Owner
-                created=timezone.now(),
-                updated=timezone.now(),
+                created=now,
+                updated=now,
             )
 
             # Add all user's existing categories to this new board
-            GoalCategory.objects.filter(user=user).update(board=new_board)
+            GoalCategory.objects.filter(user_id=user_id).update(board=new_board)
 
 
 def remove_objects(apps, schema_editor):
@@ -40,8 +39,8 @@ def remove_objects(apps, schema_editor):
     GoalCategory = apps.get_model('goals', 'GoalCategory')
 
     with transaction.atomic():
-        for user in User.objects.all():
-            GoalCategory.objects.filter(user=user).update(board=None)
+        for user_id in User.objects.values_list('id', flat=True):
+            GoalCategory.objects.filter(user=user_id).update(board=None)
         BoardParticipant.objects.all().delete()
         Board.objects.all().delete()
 
