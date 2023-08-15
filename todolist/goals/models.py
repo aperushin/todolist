@@ -27,6 +27,9 @@ class Board(DatesModelMixin):
     title = models.CharField(verbose_name=_('Title'), max_length=255)
     is_deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
 
+    def __str__(self):
+        return f'Board {self.id}: {self.title}'
+
     class Meta:
         verbose_name = _('Board')
         verbose_name_plural = _('Boards')
