@@ -85,10 +85,10 @@ class GoalCategoryCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created', 'updated', 'user')
         fields = '__all__'
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict) -> dict:
         if not BoardParticipant.objects.filter(
-            user_id=attrs['user'],
-            board_id=attrs['board'],
+            user_id=attrs['user'].id,
+            board_id=attrs['board'].id,
             role__in=[BoardParticipant.Role.owner, BoardParticipant.Role.writer]
         ).exists():
             raise serializers.ValidationError('No permission to create categories on this board')
@@ -126,12 +126,16 @@ class GoalCommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('id', 'created', 'updated', 'user')
 
-    def validate_goal(self, goal: Goal) -> Goal:
-        if goal.user != self.context['request'].user:
-            raise serializers.ValidationError('Not an owner of this goal')
-
-        return goal
-
 
 class GoalCommentCreateSerializer(GoalCommentSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    def validate(self, attrs: dict) -> dict:
+        if not BoardParticipant.objects.filter(
+            user_id=attrs['user'].id,
+            board_id=attrs['goal'].category.board_id,
+            role__in=[BoardParticipant.Role.owner, BoardParticipant.Role.writer]
+        ).exists():
+            raise serializers.ValidationError('No permission to create comments on this board')
+
+        return attrs
