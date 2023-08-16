@@ -7,6 +7,7 @@ from rest_framework.serializers import BaseSerializer
 
 from goals.filters import GoalFilter
 from goals.models import Goal
+from goals.permissions import GoalPermission
 from goals.serializers import GoalCreateSerializer, GoalSerializer
 
 
@@ -33,7 +34,10 @@ class GoalListView(ListAPIView):
     search_fields: tuple[str, ...] = ('title', 'description')
 
     def get_queryset(self) -> QuerySet:
-        return Goal.objects.filter(user=self.request.user)
+        return Goal.objects.filter(
+            category__board__participants__user_id=self.request.user.id,
+            category__is_deleted=False
+        ).exclude(status=Goal.Status.archived)
 
 
 class GoalView(RetrieveUpdateDestroyAPIView):
@@ -51,10 +55,13 @@ class GoalView(RetrieveUpdateDestroyAPIView):
     Set the given goal's status to 'archived'
     """
     serializer_class: BaseSerializer = GoalSerializer
-    permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
+    permission_classes: tuple[BasePermission, ...] = (GoalPermission, )
 
     def get_queryset(self) -> QuerySet:
-        return Goal.objects.filter(user=self.request.user)
+        return Goal.objects.filter(
+            category__board__participants__user_id=self.request.user.id,
+            category__is_deleted=False
+        ).exclude(status=Goal.Status.archived)
 
     def perform_destroy(self, instance: Goal) -> None:
         instance.status = instance.Status.archived

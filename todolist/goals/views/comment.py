@@ -6,6 +6,7 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.serializers import BaseSerializer
 
 from goals.models import GoalComment
+from goals.permissions import CommentPermission
 from goals.serializers import GoalCommentCreateSerializer, GoalCommentSerializer
 
 
@@ -31,7 +32,7 @@ class GoalCommentListView(ListAPIView):
     filterset_fields: tuple[str, ...] = ('goal', )
 
     def get_queryset(self) -> QuerySet:
-        return GoalComment.objects.filter(user=self.request.user)
+        return GoalComment.objects.filter(goal__category__board__participants__user_id=self.request.user.id)
 
 
 class GoalCommentView(RetrieveUpdateDestroyAPIView):
@@ -49,7 +50,7 @@ class GoalCommentView(RetrieveUpdateDestroyAPIView):
     Delete the given comment instance
     """
     serializer_class: BaseSerializer = GoalCommentSerializer
-    permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
+    permission_classes: tuple[BasePermission, ...] = (CommentPermission, )
 
     def get_queryset(self) -> QuerySet:
-        return GoalComment.objects.filter(user=self.request.user)
+        return GoalComment.objects.filter(goal__category__board__participants__user_id=self.request.user.id)
