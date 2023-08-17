@@ -62,7 +62,7 @@ class BoardSerializer(serializers.ModelSerializer):
                         role=role,
                     )
 
-        if title := validated_data['title']:
+        if title := validated_data.get('title'):
             instance.title = title
             instance.save()
         return instance
