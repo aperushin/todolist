@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import QuerySet
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import BaseFilterBackend, OrderingFilter, SearchFilter
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
@@ -26,10 +27,11 @@ class GoalCategoryListView(ListAPIView):
     permission_classes: tuple[BasePermission, ...] = (IsAuthenticated, )
     serializer_class: BaseSerializer = GoalCategorySerializer
 
-    filter_backends: tuple[BaseFilterBackend, ...] = (OrderingFilter, SearchFilter)
+    filter_backends: tuple[BaseFilterBackend, ...] = (OrderingFilter, SearchFilter, DjangoFilterBackend)
     ordering_fields: tuple[str, ...] = ('title', 'created')
     ordering: tuple[str, ...] = ('title', )
     search_fields: tuple[str, ...] = ('title', )
+    filterset_fields: tuple[str, ...] = ('board', )
 
     def get_queryset(self) -> QuerySet:
         return GoalCategory.objects.filter(board__participants__user_id=self.request.user.id, is_deleted=False)
