@@ -14,6 +14,13 @@ class TgUserSerializer(serializers.ModelSerializer):
 
 
 class BotVerifySerializer(serializers.Serializer):
+    """
+    Find existing TgUser with given verification_code and link it to the requesting User
+
+    Expects User object as an input instance.
+    If TgUser with the given verification code is found, sets the User as TgUser's 'user' field.
+    The save() method returns the updated TgUser object.
+    """
     verification_code = serializers.CharField(max_length=6)
 
     class Meta:
@@ -23,7 +30,7 @@ class BotVerifySerializer(serializers.Serializer):
         try:
             self._tg_user: TgUser = TgUser.objects.get(verification_code=code)
         except TgUser.DoesNotExist:
-            raise serializers.ValidationError('Validation code not found')
+            raise serializers.ValidationError('Verification code not found')
 
         return code
 
