@@ -46,16 +46,23 @@ class Command(BaseCommand):
         }
         return commands.get(command)
 
-    def clear_creation_data(self, chat_id: int) -> None:
-        self.create_data.pop(chat_id, None)
+    def clear_creation_data(self, chat_id: int, send_error_msg: bool = False) -> None:
+        """
+        Remove the user's data from self.create_data
 
-    def handle_unexpected(self, chat_id: int):
-        # Remove the user's data from self.create_data, send error message
-        self.clear_creation_data(chat_id)
-        self.tg_client.send_message(chat_id, text='Something went wrong, please start over')
+        :param send_error_msg: Send an error message to the user
+        """
+        self.create_data.pop(chat_id, None)
+        if send_error_msg:
+            self.tg_client.send_message(chat_id, text='Something went wrong, please start over')
 
     @staticmethod
     def generate_buttons_markup(button_names: list[str]) -> dict:
+        """
+        Generate buttons for telegram bot markup with button names as callback data
+
+        Adds a /cancel command button to the end
+        """
         buttons = [[{'text': name, 'callback_data': name}] for name in button_names]
         buttons.append([{'text': '[Cancel]', 'callback_data': '/cancel'}])
         return {'inline_keyboard': buttons}
@@ -94,16 +101,20 @@ class Command(BaseCommand):
             self.handle_authorized(tg_user, msg)
 
     def handle_callback(self, cb_query: CallbackQuery):
+        """
+        Handle callback from a user's chat
+        """
         tg_user: TgUser = TgUser.objects.get(tg_chat_id=cb_query.message.chat.id)
         msg = cb_query.message
 
         # Try parsing callback data as a command
         command_handler = self.get_handler(cb_query.data)
         if command_handler:
-            command_handler(tg_user, msg)
+            command_handler(tg_user, msg=msg)
         else:
+            # If not a command, should be data for create methods
             cb_data = cb_query.data
-            self.handle_create(tg_user, msg, cb_data=cb_data)
+            self.handle_create(tg_user, cb_data=cb_data)
 
     def handle_unauthorized(self, tg_user: TgUser) -> None:
         """
@@ -151,10 +162,22 @@ class Command(BaseCommand):
         self.tg_client.send_message(chat_id=tg_user.tg_chat_id, text=goals_reply_msg)
 
     def handle_create(self, tg_user: TgUser, msg: Message = None, cb_data: str = None) -> None:
+        """
+        Handle /create command or data for one of the other creation commands
+        """
         chat_id: int = tg_user.tg_chat_id
         create_data: dict = self.create_data.get(chat_id)
 
-        if create_data is None:
+        if create_data:
+            # Creation process was already started, relay data to the creation command
+            command_handler = self.get_handler(create_data.get('command'))
+            if not command_handler:
+                self.clear_creation_data(chat_id, send_error_msg=True)
+                return
+
+            command_handler(tg_user, msg, cb_data)
+        else:
+            # Send user buttons with available creation commands
             buttons = [
                 {'text': 'a goal', 'callback_data': '/creategoal'},
                 {'text': 'a category', 'callback_data': '/createcat'},
@@ -163,19 +186,19 @@ class Command(BaseCommand):
             markup = {'inline_keyboard': [buttons]}
             self.tg_client.send_message(chat_id=chat_id, text='What would you like to create?', reply_markup=markup)
 
-        else:
-            command_handler = self.get_handler(create_data.get('command'))
-            if not command_handler:
-                self.handle_unexpected(chat_id)
-                return
-
-            command_handler(tg_user, msg, cb_data)
-
     def handle_cancel(self, tg_user: TgUser, msg: Message) -> None:
+        """
+        Handle /cancel command
+
+        Clear creation data for the user's chat id, send user a message
+        """
         self.clear_creation_data(tg_user.tg_chat_id)
         self.tg_client.send_message(tg_user.tg_chat_id, text='Creation cancelled')
 
     def handle_create_goal(self, tg_user: TgUser, msg: Message = None, cb_data: str = None):
+        """
+        Handle /creategoal command
+        """
         chat_id: int = tg_user.tg_chat_id
         create_data: dict = self.create_data.get(chat_id)
 
@@ -212,7 +235,7 @@ class Command(BaseCommand):
                 category = GoalCategory.objects.exclude(is_deleted=True).get(title=category_title)
             except GoalCategory.DoesNotExist:
                 # If category was deleted before user finished creation
-                self.handle_unexpected(chat_id)
+                self.clear_creation_data(chat_id, send_error_msg=True)
                 return
 
             goal = Goal.objects.create(title=goal_title, category_id=category.id, user_id=tg_user.user.id)
@@ -226,9 +249,12 @@ class Command(BaseCommand):
             self.clear_creation_data(chat_id)
         else:
             # Failsafe for if something goes wrong
-            self.handle_unexpected(chat_id)
+            self.clear_creation_data(chat_id, send_error_msg=True)
 
     def handle_create_cat(self, tg_user: TgUser, msg: Message = None, cb_data: str = None):
+        """
+        Handle /createcat command
+        """
         chat_id: int = tg_user.tg_chat_id
         create_data: dict = self.create_data.get(chat_id)
 
@@ -266,7 +292,7 @@ class Command(BaseCommand):
                 board = Board.objects.exclude(is_deleted=True).get(title=board_title)
             except Board.DoesNotExist:
                 # If board was deleted before user finished creation
-                self.handle_unexpected(chat_id)
+                self.clear_creation_data(chat_id, send_error_msg=True)
                 return
 
             category = GoalCategory.objects.create(title=category_title, board_id=board.id, user_id=tg_user.user.id)
@@ -280,9 +306,12 @@ class Command(BaseCommand):
             self.clear_creation_data(chat_id)
         else:
             # Failsafe for if something goes wrong
-            self.handle_unexpected(chat_id)
+            self.clear_creation_data(chat_id, send_error_msg=True)
 
     def handle_create_board(self, tg_user: TgUser, msg: Message = None, cb_data: str = None):
+        """
+        Handle /createboard command
+        """
         chat_id: int = tg_user.tg_chat_id
         create_data: dict = self.create_data.get(chat_id)
 
