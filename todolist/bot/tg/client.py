@@ -39,5 +39,4 @@ class TgClient:
             params['reply_markup'] = reply_markup
 
         response_data = self._get(**params)
-        print(response_data)
         return SendMessageResponseSchema().load(response_data)

@@ -2,13 +2,14 @@ import logging
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.db.models import QuerySet
 from typing import Protocol
 
 from bot.models import TgUser
 from bot.tg.client import TgClient
 from bot.tg.dc import GetUpdatesResponse, Update, Message, CallbackQuery
-from goals.models import Goal, GoalCategory
+from goals.models import Goal, GoalCategory, Board, BoardParticipant
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,9 @@ class Handler(Protocol):
 
 class Command(BaseCommand):
     help = 'Run telegram bot'
-    create_goal_data: dict = dict()
+
+    # {tg_chat_id: {'command': '/command', data: 'data'}}
+    create_data: dict = dict()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,8 +39,26 @@ class Command(BaseCommand):
         commands = {
             '/goals': self.handle_goals,
             '/create': self.handle_create,
+            '/creategoal': self.handle_create_goal,
+            '/createcat': self.handle_create_cat,
+            '/createboard': self.handle_create_board,
+            '/cancel': self.handle_cancel,
         }
         return commands.get(command)
+
+    def clear_creation_data(self, chat_id: int) -> None:
+        self.create_data.pop(chat_id, None)
+
+    def handle_unexpected(self, chat_id: int):
+        # Remove the user's data from self.create_data, send error message
+        self.clear_creation_data(chat_id)
+        self.tg_client.send_message(chat_id, text='Something went wrong, please start over')
+
+    @staticmethod
+    def generate_buttons_markup(button_names: list[str]) -> dict:
+        buttons = [[{'text': name, 'callback_data': name}] for name in button_names]
+        buttons.append([{'text': '[Cancel]', 'callback_data': '/cancel'}])
+        return {'inline_keyboard': buttons}
 
     def handle(self, *args, **options) -> None:
         """
@@ -75,8 +96,14 @@ class Command(BaseCommand):
     def handle_callback(self, cb_query: CallbackQuery):
         tg_user: TgUser = TgUser.objects.get(tg_chat_id=cb_query.message.chat.id)
         msg = cb_query.message
-        cb_data = cb_query.data
-        self.handle_create(tg_user, msg, cb_data=cb_data)
+
+        # Try parsing callback data as a command
+        command_handler = self.get_handler(cb_query.data)
+        if command_handler:
+            command_handler(tg_user, msg)
+        else:
+            cb_data = cb_query.data
+            self.handle_create(tg_user, msg, cb_data=cb_data)
 
     def handle_unauthorized(self, tg_user: TgUser) -> None:
         """
@@ -95,12 +122,14 @@ class Command(BaseCommand):
         # If message text is one of supported commands
         if command_handler:
             command_handler(tg_user, msg)
-        # If message text is expected to contain data for handle_create method
-        elif tg_user.tg_chat_id in self.create_goal_data:
+        # If message text is expected to contain data for create methods
+        elif tg_user.tg_chat_id in self.create_data:
             self.handle_create(tg_user, msg)
         else:
             unknown_command_msg = 'Unknown command'
             self.tg_client.send_message(chat_id=tg_user.tg_chat_id, text=unknown_command_msg)
+
+    # Command handlers
 
     def handle_goals(self, tg_user: TgUser, msg: Message = None) -> None:
         """
@@ -121,12 +150,37 @@ class Command(BaseCommand):
 
         self.tg_client.send_message(chat_id=tg_user.tg_chat_id, text=goals_reply_msg)
 
-    def handle_create(self, tg_user: TgUser, msg: Message = None, cb_data: str = None):
+    def handle_create(self, tg_user: TgUser, msg: Message = None, cb_data: str = None) -> None:
         chat_id: int = tg_user.tg_chat_id
-        user_goal_data = self.create_goal_data.get(chat_id)
+        create_data: dict = self.create_data.get(chat_id)
+
+        if create_data is None:
+            buttons = [
+                {'text': 'a goal', 'callback_data': '/creategoal'},
+                {'text': 'a category', 'callback_data': '/createcat'},
+                {'text': 'a board', 'callback_data': '/createboard'},
+            ]
+            markup = {'inline_keyboard': [buttons]}
+            self.tg_client.send_message(chat_id=chat_id, text='What would you like to create?', reply_markup=markup)
+
+        else:
+            command_handler = self.get_handler(create_data.get('command'))
+            if not command_handler:
+                self.handle_unexpected(chat_id)
+                return
+
+            command_handler(tg_user, msg, cb_data)
+
+    def handle_cancel(self, tg_user: TgUser, msg: Message) -> None:
+        self.clear_creation_data(tg_user.tg_chat_id)
+        self.tg_client.send_message(tg_user.tg_chat_id, text='Creation cancelled')
+
+    def handle_create_goal(self, tg_user: TgUser, msg: Message = None, cb_data: str = None):
+        chat_id: int = tg_user.tg_chat_id
+        create_data: dict = self.create_data.get(chat_id)
 
         # Step 1: creation hasn't been started yet
-        if user_goal_data is None:
+        if create_data is None:
             # Get existing categories' titles
             category_titles = (
                 GoalCategory.objects.filter(user_id=tg_user.user_id)
@@ -134,38 +188,31 @@ class Command(BaseCommand):
                 .values_list('title', flat=True)
             )
             if not category_titles:
-                no_categories_message = 'No categories found. Please use /createcat command to create a category'
+                no_categories_message = 'No categories found. Please create a category first'
                 self.tg_client.send_message(chat_id=chat_id, text=no_categories_message)
                 return
 
             # Send a message with category titles as buttons
             choose_category_msg = 'Please choose a category from the following:\n'
-            buttons = [{'text': title, 'callback_data': title} for title in category_titles]
-            buttons.append({'text': 'Cancel goal creation', 'callback_data': '/cancel'})
-            markup = {'inline_keyboard': [buttons]}
+            markup = self.generate_buttons_markup(category_titles)
             self.tg_client.send_message(chat_id=chat_id, text=choose_category_msg, reply_markup=markup)
 
-            # Store user's chat id for the following steps
-            self.create_goal_data[chat_id] = {}
+            # Store user's chat id and the command for the following steps
+            self.create_data[chat_id] = dict(command='/creategoal')
 
         # Step 2: creation started, expecting category title
         elif cb_data:
-            if cb_data == '/cancel':
-                del self.create_goal_data[chat_id]
-                self.tg_client.send_message(chat_id, text='Goal creation cancelled')
-            elif not user_goal_data.get('category'):
-                user_goal_data['category'] = cb_data
-                self.tg_client.send_message(chat_id, text='Please enter goal title:')
+            create_data['data'] = cb_data
+            self.tg_client.send_message(chat_id, text='Please enter goal title:')
 
         # Step 3: category title was saved, expecting goal title
-        elif category_title := user_goal_data.get('category'):
+        elif category_title := create_data.get('data'):
             goal_title = msg.text
             try:
                 category = GoalCategory.objects.exclude(is_deleted=True).get(title=category_title)
             except GoalCategory.DoesNotExist:
                 # If category was deleted before user finished creation
-                del self.create_goal_data[chat_id]
-                self.tg_client.send_message(chat_id, text='Something went wrong, please start over')
+                self.handle_unexpected(chat_id)
                 return
 
             goal = Goal.objects.create(title=goal_title, category_id=category.id, user_id=tg_user.user.id)
@@ -176,8 +223,86 @@ class Command(BaseCommand):
             markup = {'inline_keyboard': [[{'text': 'View goal', 'url': goal_url}]]}
 
             self.tg_client.send_message(chat_id, text='Goal successfully created', reply_markup=markup)
-            del self.create_goal_data[chat_id]
+            self.clear_creation_data(chat_id)
         else:
             # Failsafe for if something goes wrong
-            self.create_goal_data.pop(chat_id, None)
-            self.tg_client.send_message(chat_id, text='Something went wrong, please start over')
+            self.handle_unexpected(chat_id)
+
+    def handle_create_cat(self, tg_user: TgUser, msg: Message = None, cb_data: str = None):
+        chat_id: int = tg_user.tg_chat_id
+        create_data: dict = self.create_data.get(chat_id)
+
+        # Step 1: creation hasn't been started yet
+        if create_data is None:
+            # Get existing boards' titles
+            board_titles = (
+                Board.objects.filter(
+                    participants__user=tg_user.user,
+                    participants__role__in=[BoardParticipant.Role.owner, BoardParticipant.Role.writer],
+                    is_deleted=False
+                ).values_list('title', flat=True)
+            )
+            if not board_titles:
+                no_boards_message = 'No boards found. Please create a board first'
+                self.tg_client.send_message(chat_id=chat_id, text=no_boards_message)
+                return
+
+            # Send a message with board titles as buttons
+            choose_board_msg = 'Please choose a board from the following:\n'
+            markup = self.generate_buttons_markup(board_titles)
+            self.tg_client.send_message(chat_id=chat_id, text=choose_board_msg, reply_markup=markup)
+
+            self.create_data[chat_id] = dict(command='/createcat')
+
+        # Step 2: creation started, expecting board title
+        elif cb_data:
+            create_data['data'] = cb_data
+            self.tg_client.send_message(chat_id, text='Please enter category title:')
+
+        # Step 3: board title was saved, expecting category title
+        elif board_title := create_data.get('data'):
+            category_title = msg.text
+            try:
+                board = Board.objects.exclude(is_deleted=True).get(title=board_title)
+            except Board.DoesNotExist:
+                # If board was deleted before user finished creation
+                self.handle_unexpected(chat_id)
+                return
+
+            category = GoalCategory.objects.create(title=category_title, board_id=board.id, user_id=tg_user.user.id)
+            category_url = (
+                    settings.SITE_URL +
+                    f'/boards/{category.board_id}/categories/{category.id}/goals'
+            )
+            markup = {'inline_keyboard': [[{'text': 'View category', 'url': category_url}]]}
+
+            self.tg_client.send_message(chat_id, text='Category successfully created', reply_markup=markup)
+            self.clear_creation_data(chat_id)
+        else:
+            # Failsafe for if something goes wrong
+            self.handle_unexpected(chat_id)
+
+    def handle_create_board(self, tg_user: TgUser, msg: Message = None, cb_data: str = None):
+        chat_id: int = tg_user.tg_chat_id
+        create_data: dict = self.create_data.get(chat_id)
+
+        # Step 1: creation hasn't been started yet
+        if create_data is None:
+            self.tg_client.send_message(chat_id, text='Please enter board title:')
+            self.create_data[chat_id] = dict(command='/createboard')
+
+        # Step 2: creation started, expecting board title
+        else:
+            board_title = msg.text
+            with transaction.atomic():
+                board = Board.objects.create(title=board_title)
+                BoardParticipant.objects.create(board_id=board.id, user_id=tg_user.user.id)
+
+            board_url = (
+                    settings.SITE_URL +
+                    f'/boards/{board.id}/goals'
+            )
+            markup = {'inline_keyboard': [[{'text': 'View board', 'url': board_url}]]}
+
+            self.tg_client.send_message(chat_id, text='Board successfully created', reply_markup=markup)
+            self.clear_creation_data(chat_id)
