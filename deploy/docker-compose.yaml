@@ -29,6 +29,8 @@ services:
   bot:
     image: aperushin/todolist:latest
     env_file: .env
+    environment:
+      POSTGRES_HOST: db
     entrypoint: ''
     depends_on:
       api:
