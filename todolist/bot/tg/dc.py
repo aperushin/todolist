@@ -20,9 +20,19 @@ class Message:
 
 
 @dataclass
+class CallbackQuery:
+    message: Message
+    data: str
+
+    class Meta:
+        unknown = EXCLUDE
+
+
+@dataclass
 class Update:
     update_id: int
-    message: Message
+    message: Message | None = None
+    callback_query: CallbackQuery | None = None
 
     class Meta:
         unknown = EXCLUDE

@@ -76,6 +76,8 @@ REST_FRAMEWORK = {
 
 ROOT_URLCONF = 'todolist.urls'
 
+SITE_URL = env('SITE_URL', default='http://aperushin.ru')
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

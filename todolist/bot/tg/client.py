@@ -26,13 +26,18 @@ class TgClient:
 
     def _get(self, method: BotMethod, **params) -> dict:
         url = self.get_url(method=method)
-        response = requests.get(url, params=params)
+        response = requests.get(url, json=params)
         return response.json()
 
     def get_updates(self, offset: int = 0, timeout: int = 60) -> GetUpdatesResponse:
         response_data = self._get(BotMethod.GET_UPDATES, offset=offset, timeout=timeout)
         return GetUpdatesResponseSchema().load(response_data)
 
-    def send_message(self, chat_id: int, text: str) -> SendMessageResponse:
-        response_data = self._get(BotMethod.SEND_MESSAGE, chat_id=chat_id, text=text)
+    def send_message(self, chat_id: int, text: str, reply_markup: dict = None) -> SendMessageResponse:
+        params: dict = dict(method=BotMethod.SEND_MESSAGE, chat_id=chat_id, text=text)
+        if reply_markup:
+            params['reply_markup'] = reply_markup
+
+        response_data = self._get(**params)
+        print(response_data)
         return SendMessageResponseSchema().load(response_data)
