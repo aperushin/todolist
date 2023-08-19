@@ -25,7 +25,7 @@ class Handler(Protocol):
 class Command(BaseCommand):
     help = 'Run telegram bot'
 
-    # {tg_chat_id: {'command': '/command', data: 'data'}}
+    # {tg_chat_id: {'command': '/command', 'data': 'data'}}
     create_data: dict = dict()
 
     def __init__(self, *args, **kwargs):
