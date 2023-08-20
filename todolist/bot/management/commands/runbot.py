@@ -137,8 +137,7 @@ class Command(BaseCommand):
         elif tg_user.tg_chat_id in self.create_data:
             self.handle_create(tg_user, msg)
         else:
-            unknown_command_msg = 'Unknown command'
-            self.tg_client.send_message(chat_id=tg_user.tg_chat_id, text=unknown_command_msg)
+            self.tg_client.send_message(chat_id=tg_user.tg_chat_id, text='Unknown command')
 
     # Command handlers
 
@@ -240,8 +239,8 @@ class Command(BaseCommand):
 
             goal = Goal.objects.create(title=goal_title, category_id=category.id, user_id=tg_user.user.id)
             goal_url = (
-                    settings.SITE_URL +
-                    f'/boards/{goal.category.board_id}/categories/{goal.category_id}/goals?goal={goal.id}'
+                settings.SITE_URL +
+                f'/boards/{goal.category.board_id}/categories/{goal.category_id}/goals?goal={goal.id}'
             )
             markup = {'inline_keyboard': [[{'text': 'View goal', 'url': goal_url}]]}
 
@@ -297,8 +296,8 @@ class Command(BaseCommand):
 
             category = GoalCategory.objects.create(title=category_title, board_id=board.id, user_id=tg_user.user.id)
             category_url = (
-                    settings.SITE_URL +
-                    f'/boards/{category.board_id}/categories/{category.id}/goals'
+                settings.SITE_URL +
+                f'/boards/{category.board_id}/categories/{category.id}/goals'
             )
             markup = {'inline_keyboard': [[{'text': 'View category', 'url': category_url}]]}
 
@@ -328,8 +327,8 @@ class Command(BaseCommand):
                 BoardParticipant.objects.create(board_id=board.id, user_id=tg_user.user.id)
 
             board_url = (
-                    settings.SITE_URL +
-                    f'/boards/{board.id}/goals'
+                settings.SITE_URL +
+                f'/boards/{board.id}/goals'
             )
             markup = {'inline_keyboard': [[{'text': 'View board', 'url': board_url}]]}
 
