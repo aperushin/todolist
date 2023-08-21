@@ -1,9 +1,12 @@
+import logging
 import marshmallow_dataclass
 import requests
 from enum import Enum
 
 from django.conf import settings
 from bot.tg.dc import GetUpdatesResponse, SendMessageResponse
+
+logger = logging.getLogger(__name__)
 
 GetUpdatesResponseSchema = marshmallow_dataclass.class_schema(GetUpdatesResponse)
 SendMessageResponseSchema = marshmallow_dataclass.class_schema(SendMessageResponse)
@@ -27,6 +30,9 @@ class TgClient:
     def _get(self, method: BotMethod, **params) -> dict:
         url = self.get_url(method=method)
         response = requests.get(url, json=params)
+        if response.status_code != 200:
+            logger.error(f'{response.status_code}: {response.json().get("description")}')
+            raise ValueError('Invalid response')
         return response.json()
 
     def get_updates(self, offset: int = 0, timeout: int = 60) -> GetUpdatesResponse:
