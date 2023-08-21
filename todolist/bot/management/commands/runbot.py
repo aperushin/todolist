@@ -25,7 +25,7 @@ class Handler(Protocol):
 class Command(BaseCommand):
     help = 'Run telegram bot'
 
-    # {tg_chat_id: {'command': '/command', 'data': 'data'}}
+    # {chat_id: {'command': '/command', 'data': 'data'}}
     create_data: dict = dict()
 
     def __init__(self, *args, **kwargs):
@@ -55,11 +55,11 @@ class Command(BaseCommand):
         Handle message from a user
         """
         tg_user: TgUser
-        tg_user, created = TgUser.objects.get_or_create(tg_chat_id=msg.chat.id)
+        tg_user, created = TgUser.objects.get_or_create(chat_id=msg.chat.id)
 
         if created:
             greeting_msg = f'Hello there, your verification code: {tg_user.verification_code}'
-            self.tg_client.send_message(chat_id=tg_user.tg_chat_id, text=greeting_msg)
+            self.tg_client.send_message(chat_id=tg_user.chat_id, text=greeting_msg)
         elif not tg_user.user:
             self.handle_unauthorized(tg_user)
         else:
@@ -69,7 +69,7 @@ class Command(BaseCommand):
         """
         Handle callback from a user's chat
         """
-        tg_user: TgUser = TgUser.objects.get(tg_chat_id=cb_query.message.chat.id)
+        tg_user: TgUser = TgUser.objects.get(chat_id=cb_query.message.chat.id)
         msg = cb_query.message
 
         # Try parsing callback data as a command
@@ -87,7 +87,7 @@ class Command(BaseCommand):
         """
         tg_user.update_verification_code()
         unauthorized_msg = f'Please enter this verification code on {settings.SITE_URL}: {tg_user.verification_code}'
-        self.tg_client.send_message(chat_id=tg_user.tg_chat_id, text=unauthorized_msg)
+        self.tg_client.send_message(chat_id=tg_user.chat_id, text=unauthorized_msg)
 
     def handle_authorized(self, tg_user: TgUser, msg: Message) -> None:
         """
@@ -99,10 +99,10 @@ class Command(BaseCommand):
         if command_handler:
             command_handler(tg_user, msg)
         # If message text is expected to contain data for create methods
-        elif tg_user.tg_chat_id in self.create_data:
+        elif tg_user.chat_id in self.create_data:
             self.handle_create(tg_user, msg)
         else:
-            self.tg_client.send_message(chat_id=tg_user.tg_chat_id, text='Unknown command')
+            self.tg_client.send_message(chat_id=tg_user.chat_id, text='Unknown command')
 
     def get_handler(self, command: str) -> Handler | None:
         """
@@ -158,13 +158,13 @@ class Command(BaseCommand):
         else:
             goals_reply_msg = "You don't have any active goals at the moment"
 
-        self.tg_client.send_message(chat_id=tg_user.tg_chat_id, text=goals_reply_msg)
+        self.tg_client.send_message(chat_id=tg_user.chat_id, text=goals_reply_msg)
 
     def handle_create(self, tg_user: TgUser, msg: Message = None, cb_data: str = None) -> None:
         """
         Handle /create command or data for one of the other creation commands
         """
-        chat_id: int = tg_user.tg_chat_id
+        chat_id: int = tg_user.chat_id
         create_data: dict = self.create_data.get(chat_id)
 
         if create_data:
@@ -191,14 +191,14 @@ class Command(BaseCommand):
 
         Clear creation data for the user's chat id, send user a message
         """
-        self.clear_creation_data(tg_user.tg_chat_id)
-        self.tg_client.send_message(tg_user.tg_chat_id, text='Creation cancelled')
+        self.clear_creation_data(tg_user.chat_id)
+        self.tg_client.send_message(tg_user.chat_id, text='Creation cancelled')
 
     def handle_create_goal(self, tg_user: TgUser, msg: Message = None, cb_data: str = None):
         """
         Handle /creategoal command
         """
-        chat_id: int = tg_user.tg_chat_id
+        chat_id: int = tg_user.chat_id
         create_data: dict = self.create_data.get(chat_id)
 
         # Step 1: creation hasn't been started yet
@@ -254,7 +254,7 @@ class Command(BaseCommand):
         """
         Handle /createcat command
         """
-        chat_id: int = tg_user.tg_chat_id
+        chat_id: int = tg_user.chat_id
         create_data: dict = self.create_data.get(chat_id)
 
         # Step 1: creation hasn't been started yet
@@ -311,7 +311,7 @@ class Command(BaseCommand):
         """
         Handle /createboard command
         """
-        chat_id: int = tg_user.tg_chat_id
+        chat_id: int = tg_user.chat_id
         create_data: dict = self.create_data.get(chat_id)
 
         # Step 1: creation hasn't been started yet

@@ -18,4 +18,4 @@ class BotVerifyView(UpdateAPIView):
     def perform_update(self, serializer: BotVerifySerializer):
         tg_user: TgUser = serializer.save()
         verify_success_msg = 'Congratulations! You have successfully linked your telegram account'
-        TgClient().send_message(chat_id=tg_user.tg_chat_id, text=verify_success_msg)
+        TgClient().send_message(chat_id=tg_user.chat_id, text=verify_success_msg)

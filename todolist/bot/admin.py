@@ -5,5 +5,5 @@ from bot.models import TgUser
 
 @admin.register(TgUser)
 class TgUserAdmin(admin.ModelAdmin):
-    list_display = ('tg_chat_id', 'user')
-    search_fields = ('tg_chat_id', 'user__username')
+    list_display = ('chat_id', 'user')
+    search_fields = ('chat_id', 'user__username')
