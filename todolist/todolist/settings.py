@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     # First party apps
     'core',
     'goals',
+    'bot',
 ]
 
 MIDDLEWARE = [
@@ -74,6 +75,8 @@ REST_FRAMEWORK = {
 }
 
 ROOT_URLCONF = 'todolist.urls'
+
+SITE_URL = env('SITE_URL', default='http://aperushin.ru')
 
 TEMPLATES = [
     {
@@ -146,6 +149,9 @@ SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/logged-in/'
 SOCIAL_AUTH_LOGIN_ERROR_URL = '/login-error/'
 SOCIAL_AUTH_USER_MODEL = 'core.User'
 
+# Telegram bot
+TELEGRAM_BOT_TOKEN = env('TELEGRAM_BOT_TOKEN')
+
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -168,3 +174,21 @@ STATIC_ROOT = BASE_DIR.joinpath('static')
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGGING = {
+    'disable_existing_loggers': False,
+    'version': 1,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG' if DEBUG else 'INFO',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': True,
+        },
+    },
+}

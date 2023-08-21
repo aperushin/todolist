@@ -26,6 +26,18 @@ services:
         condition: service_healthy
     restart: always
 
+  bot:
+    image: aperushin/todolist:latest
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+    entrypoint: ''
+    depends_on:
+      api:
+        condition: service_started
+    restart: always
+    command: python /code/todolist/manage.py runbot
+
   collect_static:
     image: aperushin/todolist:latest
     env_file: .env
@@ -35,7 +47,7 @@ services:
     command: python /code/todolist/manage.py collectstatic -c --no-input
 
   frontend:
-    image: sermalenk/skypro-front:lesson-37
+    image: sermalenk/skypro-front:lesson-38
     depends_on:
       api:
         condition: service_started
