@@ -32,41 +32,6 @@ class Command(BaseCommand):
         super().__init__(*args, **kwargs)
         self.tg_client: TgClient = TgClient()
 
-    def get_handler(self, command: str) -> Handler | None:
-        """
-        Return a callable method based on the given command
-        """
-        commands = {
-            '/goals': self.handle_goals,
-            '/create': self.handle_create,
-            '/creategoal': self.handle_create_goal,
-            '/createcat': self.handle_create_cat,
-            '/createboard': self.handle_create_board,
-            '/cancel': self.handle_cancel,
-        }
-        return commands.get(command)
-
-    def clear_creation_data(self, chat_id: int, send_error_msg: bool = False) -> None:
-        """
-        Remove the user's data from self.create_data
-
-        :param send_error_msg: Send an error message to the user
-        """
-        self.create_data.pop(chat_id, None)
-        if send_error_msg:
-            self.tg_client.send_message(chat_id, text='Something went wrong, please start over')
-
-    @staticmethod
-    def generate_buttons_markup(button_names: list[str]) -> dict:
-        """
-        Generate buttons for telegram bot markup with button names as callback data
-
-        Adds a /cancel command button to the end
-        """
-        buttons = [[{'text': name, 'callback_data': name}] for name in button_names]
-        buttons.append([{'text': '[Cancel]', 'callback_data': '/cancel'}])
-        return {'inline_keyboard': buttons}
-
     def handle(self, *args, **options) -> None:
         """
         Main loop
@@ -100,7 +65,7 @@ class Command(BaseCommand):
         else:
             self.handle_authorized(tg_user, msg)
 
-    def handle_callback(self, cb_query: CallbackQuery):
+    def handle_callback(self, cb_query: CallbackQuery) -> None:
         """
         Handle callback from a user's chat
         """
@@ -138,6 +103,41 @@ class Command(BaseCommand):
             self.handle_create(tg_user, msg)
         else:
             self.tg_client.send_message(chat_id=tg_user.tg_chat_id, text='Unknown command')
+
+    def get_handler(self, command: str) -> Handler | None:
+        """
+        Return a callable method based on the given command
+        """
+        commands = {
+            '/goals': self.handle_goals,
+            '/create': self.handle_create,
+            '/creategoal': self.handle_create_goal,
+            '/createcat': self.handle_create_cat,
+            '/createboard': self.handle_create_board,
+            '/cancel': self.handle_cancel,
+        }
+        return commands.get(command)
+
+    def clear_creation_data(self, chat_id: int, send_error_msg: bool = False) -> None:
+        """
+        Remove the user's data from self.create_data
+
+        :param send_error_msg: Send an error message to the user
+        """
+        self.create_data.pop(chat_id, None)
+        if send_error_msg:
+            self.tg_client.send_message(chat_id, text='Something went wrong, please start over')
+
+    @staticmethod
+    def generate_buttons_markup(button_names: list[str]) -> dict:
+        """
+        Generate buttons for telegram bot markup with button names as callback data
+
+        Adds a /cancel command button to the end
+        """
+        buttons = [[{'text': name, 'callback_data': name}] for name in button_names]
+        buttons.append([{'text': '[Cancel]', 'callback_data': '/cancel'}])
+        return {'inline_keyboard': buttons}
 
     # Command handlers
 
