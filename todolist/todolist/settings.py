@@ -76,7 +76,7 @@ REST_FRAMEWORK = {
 
 ROOT_URLCONF = 'todolist.urls'
 
-SITE_URL = env('SITE_URL', default='http://aperushin.ru')
+SITE_URL = env('SITE_URL', default='http://127.0.0.1')
 
 TEMPLATES = [
     {
