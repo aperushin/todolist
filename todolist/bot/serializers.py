@@ -5,7 +5,7 @@ from bot.models import TgUser
 
 
 class TgUserSerializer(serializers.ModelSerializer):
-    tg_id = serializers.SlugField(source='tg_chat_id', read_only=True)
+    tg_id = serializers.SlugField(source='chat_id', read_only=True)
     username = serializers.SlugRelatedField(source='user', slug_field='username', read_only=True)
 
     class Meta:

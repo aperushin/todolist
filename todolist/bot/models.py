@@ -7,7 +7,7 @@ from core.models import User
 
 
 class TgUser(models.Model):
-    tg_chat_id = models.BigIntegerField(verbose_name=_('Telegram chat id'), unique=True)
+    chat_id = models.BigIntegerField(verbose_name=_('Telegram chat id'), unique=True, primary_key=True)
     user = models.ForeignKey(User, verbose_name=_('User'), on_delete=models.CASCADE, null=True)
     verification_code = models.CharField(max_length=settings.VERIFICATION_CODE_LENGTH, null=True)
 
