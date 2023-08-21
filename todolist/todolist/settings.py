@@ -150,7 +150,11 @@ SOCIAL_AUTH_LOGIN_ERROR_URL = '/login-error/'
 SOCIAL_AUTH_USER_MODEL = 'core.User'
 
 # Telegram bot
+
 TELEGRAM_BOT_TOKEN = env('TELEGRAM_BOT_TOKEN')
+
+# Length of a verification code used to verify a telegram user
+VERIFICATION_CODE_LENGTH = 6
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
