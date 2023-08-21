@@ -1,24 +1,19 @@
-import random
-import string
-
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils.crypto import get_random_string
 
 from core.models import User
-
-ALPHANUM: str = string.ascii_uppercase + string.ascii_lowercase + string.digits
 
 
 class TgUser(models.Model):
     tg_chat_id = models.BigIntegerField(verbose_name=_('Telegram chat id'), unique=True)
     user = models.ForeignKey(User, verbose_name=_('User'), on_delete=models.CASCADE, null=True)
-    verification_code = models.CharField(max_length=6, null=True)
+    verification_code = models.CharField(max_length=settings.VERIFICATION_CODE_LENGTH, null=True)
 
     @staticmethod
     def _generate_verification_code() -> str:
-        code_length = 6
-        code = ''.join([random.choice(ALPHANUM) for _ in range(code_length)])
-        return code
+        return get_random_string(settings.VERIFICATION_CODE_LENGTH)
 
     def update_verification_code(self) -> None:
         self.verification_code = self._generate_verification_code()
