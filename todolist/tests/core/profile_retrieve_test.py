@@ -1,34 +1,24 @@
 import pytest
-from tests.factories import UserFactory, USER_PASSWORD
+from django.urls import reverse
+from rest_framework import status
+
+from core.models import User
 
 
 @pytest.mark.django_db
-def test_retrieve_profile(client, user: UserFactory):
-    """
-    Test successfully getting profile data
-    """
-    client.login(username=user.username, password=USER_PASSWORD)
+class TestRetrieveProfile:
+    url = reverse('core:profile')
 
-    expected_response = {
-        'username': user.username,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'email': user.email,
-    }
+    def test_success(self, auth_client, user: User, serialize_user):
+        """Test successfully getting profile data"""
+        response = auth_client.get(self.url)
 
-    response = client.get('/core/profile')
-    response.data.pop('id')
+        assert response.data == serialize_user(user, id=user.id)
+        assert response.status_code == status.HTTP_200_OK
 
-    assert response.data == expected_response
-    assert response.status_code == 200
+    def test_no_auth(self, client):
+        """Request without authentication returns an error"""
+        response = client.get(self.url)
 
-
-@pytest.mark.django_db
-def test_retrieve_profile_no_auth(client):
-    """
-    Test getting profile data without authentication
-    """
-    response = client.get('/core/profile')
-
-    assert response.data == {'detail': 'Authentication credentials were not provided.'}
-    assert response.status_code == 403
+        assert response.data == {'detail': 'Authentication credentials were not provided.'}
+        assert response.status_code == status.HTTP_403_FORBIDDEN

@@ -20,7 +20,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('oauth/', include('social_django.urls', namespace='social')),
-    path('core/', include('core.urls')),
-    path('goals/', include('goals.urls')),
-    path('bot/', include('bot.urls')),
+    path('core/', include('core.urls', namespace='core')),
+    path('goals/', include('goals.urls', namespace='goals')),
+    path('bot/', include('bot.urls', namespace='bot')),
 ]

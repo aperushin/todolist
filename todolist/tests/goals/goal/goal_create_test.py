@@ -1,110 +1,55 @@
 import pytest
+from django.urls import reverse
+from rest_framework import status
 
-from tests.factories import UserFactory, USER_PASSWORD, GoalCategoryFactory
-
-
-@pytest.mark.django_db
-def test_create_goal(client, user: UserFactory, helpers, formatted_now):
-    """
-    Test successful goal creation
-    """
-    client.login(username=user.username, password=USER_PASSWORD)
-
-    category = GoalCategoryFactory.create(user=user)
-
-    data = {
-        'category': category.id,
-        'title': 'Test goal',
-        'description': '',
-        'due_date': '2124-08-09',
-        'status': 1,
-        'priority': 1
-    }
-
-    expected_response = {
-        'category': category.id,
-        'created': formatted_now,
-        'updated': formatted_now,
-        'title': 'Test goal',
-        'description': '',
-        'due_date': '2124-08-09',
-        'status': 1,
-        'priority': 1
-    }
-
-    response = client.post('/goals/goal/create', data, format='json')
-
-    response.data.pop('id')
-    helpers.trim_dates(response.data)
-
-    assert response.data == expected_response
-    assert response.status_code == 201
+from core.models import User
 
 
 @pytest.mark.django_db
-def test_create_goal_deleted_category(client, user: UserFactory):
-    """
-    Test goal creation with deleted category
-    """
-    client.login(username=user.username, password=USER_PASSWORD)
+class TestCreateGoal:
+    url: str = reverse('goals:create-goal')
+    default_due_date: str = '2124-12-12'
 
-    category = GoalCategoryFactory.create(user=user, is_deleted=True)
+    def get_creation_data(self, **kwargs) -> dict:
+        data = {
+            'title': 'Test goal',
+            'description': 'Test description',
+            'due_date': self.default_due_date,
+            'status': 1,
+            'priority': 1
+        }
+        data |= kwargs
+        return data
 
-    data = {
-        'category': category.id,
-        'title': 'Test goal',
-        'description': '',
-        'due_date': '2124-08-09',
-        'status': 1,
-        'priority': 1
-    }
+    def test_success(self, auth_client, goal_category, goal_data):
+        """Test successful goal creation"""
+        response = auth_client.post(self.url, self.get_creation_data(category=goal_category.id))
 
-    response = client.post('/goals/goal/create', data, format='json')
+        assert response.data == goal_data(category=goal_category.id, due_date=self.default_due_date)
+        assert response.status_code == status.HTTP_201_CREATED
 
-    assert response.data == {'category': ['Cannot use a deleted category']}
-    assert response.status_code == 400
+    def test_create_goal_deleted_category(self, auth_client, user: User, goal_category_factory):
+        """Request with a deleted category returns an error"""
+        category = goal_category_factory.create(user=user, is_deleted=True)
 
+        response = auth_client.post(self.url, self.get_creation_data(category=category.id))
 
-@pytest.mark.django_db
-def test_create_goal_not_category_owner(client, user: UserFactory):
-    """
-    Test goal creation with other user's category
-    """
-    client.login(username=user.username, password=USER_PASSWORD)
+        assert response.data == {'category': ['Cannot use a deleted category']}
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    other_user = UserFactory.create()
-    category = GoalCategoryFactory.create(user=other_user)
+    def test_create_goal_not_category_owner(self, auth_client, user_factory, goal_category_factory):
+        """Request with a different user's category returns an error"""
+        other_user = user_factory.create()
+        category = goal_category_factory.create(user=other_user)
 
-    data = {
-        'category': category.id,
-        'title': 'Test goal',
-        'description': '',
-        'due_date': '2124-08-09',
-        'status': 1,
-        'priority': 1
-    }
+        response = auth_client.post(self.url, self.get_creation_data(category=category.id))
 
-    response = client.post('/goals/goal/create', data, format='json')
+        assert response.data == {'category': ['Not an owner of this category']}
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    assert response.data == {'category': ['Not an owner of this category']}
-    assert response.status_code == 400
+    def test_create_goal_not_authenticated(self, client):
+        """Request without authentication returns an error"""
+        response = client.post(self.url, self.get_creation_data(category=1))
 
-
-@pytest.mark.django_db
-def test_create_goal_not_authenticated(client):
-    """
-    Test goal creation without authentication
-    """
-    data = {
-        'category': 1,
-        'title': 'Test goal',
-        'description': '',
-        'due_date': '2124-08-09',
-        'status': 1,
-        'priority': 1
-    }
-
-    response = client.post('/goals/goal/create', data, format='json')
-
-    assert response.data == {'detail': 'Authentication credentials were not provided.'}
-    assert response.status_code == 403
+        assert response.data == {'detail': 'Authentication credentials were not provided.'}
+        assert response.status_code == status.HTTP_403_FORBIDDEN

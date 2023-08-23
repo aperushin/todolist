@@ -1,49 +1,26 @@
 import pytest
+from django.urls import reverse
+from rest_framework import status
 
-from tests.factories import USER_PASSWORD
-from core.models import User
 from goals.models import Board, BoardParticipant
 
 
 @pytest.mark.django_db
-def test_create_category(client, user: User, board: Board, formatted_now, helpers, board_participant: BoardParticipant):
-    """
-    Test successful category creation
-    """
-    client.login(username=user.username, password=USER_PASSWORD)
+class TestCreateCategory:
+    url = reverse('goals:create-category')
 
-    data = {
-        'title': 'Test category',
-        'board': board.id,
-    }
+    def test_success(self, auth_client, board_participant: BoardParticipant, category_data):
+        """Test successful category creation"""
+        board: Board = board_participant.board
 
-    expected_response = {
-        'title': 'Test category',
-        'board': board.id,
-        'created': formatted_now,
-        'updated': formatted_now,
-        'is_deleted': False,
-    }
+        response = auth_client.post(self.url, data={'title': 'Test category', 'board': board.id})
 
-    response = client.post('/goals/goal_category/create', data, format='json')
+        assert response.data == category_data(board=board.id)
+        assert response.status_code == status.HTTP_201_CREATED
 
-    response.data.pop('id')
-    helpers.trim_dates(response.data)
+    def test_not_authenticated(self, client):
+        """Request without authentication returns an error"""
+        response = client.post(self.url, data={'title': 'Test category'})
 
-    assert response.data == expected_response
-    assert response.status_code == 201
-
-
-@pytest.mark.django_db
-def test_create_category_not_authenticated(client):
-    """
-    Test category creation without authentication
-    """
-    data = {
-        'title': 'Test category',
-    }
-
-    response = client.post('/goals/goal_category/create', data, format='json')
-
-    assert response.data == {'detail': 'Authentication credentials were not provided.'}
-    assert response.status_code == 403
+        assert response.data == {'detail': 'Authentication credentials were not provided.'}
+        assert response.status_code == status.HTTP_403_FORBIDDEN
