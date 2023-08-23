@@ -9,6 +9,10 @@ from bot.serializers import BotVerifySerializer
 
 
 class BotVerifyView(UpdateAPIView):
+    """
+    partial_update:
+    Verify a telegram account with a verification code given by the bot
+    """
     serializer_class: BaseSerializer = BotVerifySerializer
     permission_classes: BasePermission = (IsAuthenticated, )
 

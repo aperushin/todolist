@@ -1,106 +1,70 @@
 import pytest
+from django.urls import reverse
+from rest_framework import status
+from typing import Callable
+
+from core.models import User
+
+
+@pytest.fixture
+def user_create_data(faker) -> Callable:
+    def _wrapper(**kwargs) -> dict:
+        data = {
+            'username': faker.user_name(),
+            'first_name': faker.name(),
+            'last_name': faker.name(),
+            'email': faker.email(),
+        }
+        data |= kwargs
+        return data
+    return _wrapper
 
 
 @pytest.mark.django_db
-def test_create_user(client):
-    """
-    Test successful user creation
-    """
-    data = {
-      'username': 'test_user',
-      'first_name': 'Test',
-      'last_name': 'Test',
-      'email': 'user@example.com',
-      'password': '123afafa',
-      'password_repeat': '123afafa'
-    }
+class TestCreateUser:
+    url: str = reverse('core:signup')
+    valid_password: str = '123afafa'
 
-    expected_response = {
-      'username': 'test_user',
-      'first_name': 'Test',
-      'last_name': 'Test',
-      'email': 'user@example.com'
-    }
+    def test_success(self, client, user_create_data, serialize_user):
+        """Test successful user creation"""
+        data: dict = user_create_data(password=self.valid_password, password_repeat=self.valid_password)
 
-    response = client.post('/core/signup', data, format='json')
-    response.data.pop('id')
+        response = client.post(self.url, data=data)
 
-    assert response.data == expected_response
-    assert response.status_code == 201
+        assert response.data == serialize_user(User.objects.last())
+        assert response.status_code == status.HTTP_201_CREATED
 
+    def test_password_mismatch(self, client, user_create_data):
+        """Request with incorrectly repeated password returns an error"""
+        data = user_create_data(password=self.valid_password, password_repeat=(self.valid_password + '1'))
 
-@pytest.mark.django_db
-def test_create_user_password_mismatch(client):
-    """
-    Test user creation with incorrectly repeated password
-    """
-    data = {
-      'username': 'test_user_1',
-      'first_name': 'Test',
-      'last_name': 'Test',
-      'email': 'user@example.com',
-      'password': '123afafa',
-      'password_repeat': '123afafaf'
-    }
+        response = client.post(self.url, data)
 
-    response = client.post('/core/signup', data, format='json')
+        assert response.data == {'password_repeat': ['Passwords do not match']}
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    assert response.data == {'password_repeat': ['Passwords do not match']}
-    assert response.status_code == 400
-
-
-@pytest.mark.django_db
-def test_create_user_password_too_simple(client):
-    """
-    Test user creation with a weak password
-    """
-    data = {
-      'username': 'test_user_2',
-      'first_name': 'Test',
-      'last_name': 'Test',
-      'email': 'user@example.com',
-      'password': '123',
-      'password_repeat': '123'
-    }
-
-    expected_response = {
-        'password': [
-            'This password is too short. It must contain at least 8 characters.',
-            'This password is too common.',
-            'This password is entirely numeric.',
-        ],
-        'password_repeat': [
+    def test_password_too_simple(self, client, user_create_data):
+        """Request with a weak password returns an error"""
+        weak_password = '123'
+        data = user_create_data(password=weak_password, password_repeat=weak_password)
+        expected_errors = [
             'This password is too short. It must contain at least 8 characters.',
             'This password is too common.',
             'This password is entirely numeric.',
         ]
-    }
 
-    response = client.post('/core/signup', data, format='json')
+        response = client.post(self.url, data)
 
-    assert response.data == expected_response
-    assert response.status_code == 400
+        assert response.data == {'password': expected_errors, 'password_repeat': expected_errors}
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_user_already_exists(self, client, user_create_data):
+        """Request with an existing username returns an error"""
+        data = user_create_data(password=self.valid_password, password_repeat=self.valid_password)
 
-@pytest.mark.django_db
-def test_create_user_already_exists(client):
-    """
-    Test user creation with existing username
-    """
-    data = {
-      'username': 'test_user_3',
-      'first_name': 'Test',
-      'last_name': 'Test',
-      'email': 'user@example.com',
-      'password': '123afafa',
-      'password_repeat': '123afafa'
-    }
+        # Posting same data twice
+        client.post(self.url, data)
+        response = client.post(self.url, data)
 
-    expected_response = {'username': ['A user with that username already exists.']}
-
-    # Posting same data twice
-    _ = client.post('/core/signup', data, format='json')
-    response = client.post('/core/signup', data, format='json')
-
-    assert response.data == expected_response
-    assert response.status_code == 400
+        assert response.data == {'username': ['A user with that username already exists.']}
+        assert response.status_code == status.HTTP_400_BAD_REQUEST

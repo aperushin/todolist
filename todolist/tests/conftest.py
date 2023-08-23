@@ -1,43 +1,104 @@
-from typing import OrderedDict
-
 import pytest
-from django.utils import timezone
-from pytest_factoryboy import register
+from rest_framework.test import APIClient
+from typing import Callable
+from unittest.mock import ANY
 
-from tests.factories import UserFactory, GoalCategoryFactory, BoardFactory, BoardParticipantFactory, GoalFactory
+from core.models import User
+from goals.models import BoardParticipant
 
-register(UserFactory)
-register(GoalCategoryFactory)
-register(GoalFactory)
-register(BoardFactory)
-register(BoardParticipantFactory)
-
-
-class Helpers:
-    @staticmethod
-    def trim_dates(response_data: OrderedDict) -> None:
-        """
-        Trim dates from responses to fit the format %Y-%m-%dT%H:%M
-
-        This is needed to prevent tests failing because of differences in seconds/millisecond
-        between the creation of objects and the timestamps in expected data
-        """
-        response_data['created'] = response_data['created'][:-11]
-        response_data['updated'] = response_data['updated'][:-11]
-        if participants := response_data.get('participants'):
-            for i, _ in enumerate(participants):
-                response_data['participants'][i]['created'] = response_data['participants'][i]['created'][:-11]
-                response_data['participants'][i]['updated'] = response_data['participants'][i]['updated'][:-11]
+pytest_plugins = 'tests.factories'
 
 
 @pytest.fixture
-def helpers():
-    return Helpers
+def client() -> APIClient:
+    return APIClient()
 
 
 @pytest.fixture
-def formatted_now() -> str:
-    """
-    Return datetime string in format %Y-%m-%dT%H:%M
-    """
-    return timezone.now().strftime('%Y-%m-%dT%H:%M')
+def auth_client(client, user) -> APIClient:
+    client.force_login(user)
+    return client
+
+
+@pytest.fixture
+def created_updated_any() -> dict:
+    return {'created': ANY, 'updated': ANY}
+
+
+@pytest.fixture
+def serialize_user() -> Callable:
+    def _wrapper(user: User, **kwargs) -> dict:
+        data = {
+            'id': ANY,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+        }
+        data |= kwargs
+        return data
+    return _wrapper
+
+
+@pytest.fixture
+def participant_data(created_updated_any) -> Callable:
+    def _wrapper(board_participant: BoardParticipant = None, **kwargs) -> dict:
+        data = {'role': BoardParticipant.Role.owner}
+        if board_participant:
+            data |= {
+                'id': board_participant.id,
+                'user': board_participant.user.username,
+                'board': board_participant.board.id,
+            }
+        else:
+            data |= {'id': ANY, 'user': ANY}
+        data |= created_updated_any
+        data |= kwargs
+        return data
+    return _wrapper
+
+
+@pytest.fixture
+def board_data(created_updated_any) -> Callable:
+    def _wrapper(**kwargs) -> dict:
+        data = {
+            'id': ANY,
+            'title': 'Test board',
+            'is_deleted': False,
+        }
+        data |= created_updated_any
+        data |= kwargs
+        return data
+    return _wrapper
+
+
+@pytest.fixture
+def category_data(created_updated_any) -> Callable:
+    def _wrapper(**kwargs) -> dict:
+        data = {
+            'id': ANY,
+            'title': 'Test category',
+            'is_deleted': False,
+        }
+        data |= created_updated_any
+        data |= kwargs
+        return data
+    return _wrapper
+
+
+@pytest.fixture
+def goal_data(created_updated_any) -> Callable:
+    def _wrapper(**kwargs) -> dict:
+        data = {
+            'id': ANY,
+            'category': ANY,
+            'title': 'Test goal',
+            'description': 'Test description',
+            'due_date': ANY,
+            'status': 1,
+            'priority': 1,
+        }
+        data |= created_updated_any
+        data |= kwargs
+        return data
+    return _wrapper

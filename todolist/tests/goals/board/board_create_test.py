@@ -1,46 +1,22 @@
 import pytest
-
-from core.models import User
-from tests.factories import USER_PASSWORD
-
-
-@pytest.mark.django_db
-def test_create_board(client, user: User, helpers, formatted_now):
-    """
-    Test successful board creation
-    """
-    client.login(username=user.username, password=USER_PASSWORD)
-
-    data = {
-        'title': 'Test board',
-    }
-
-    expected_response = {
-        'title': 'Test board',
-        'created': formatted_now,
-        'updated': formatted_now,
-        'is_deleted': False,
-    }
-
-    response = client.post('/goals/board/create', data, format='json')
-
-    response.data.pop('id')
-    helpers.trim_dates(response.data)
-
-    assert response.data == expected_response
-    assert response.status_code == 201
+from django.urls import reverse
+from rest_framework import status
 
 
 @pytest.mark.django_db
-def test_create_board_not_authenticated(client):
-    """
-    Test board creation without authentication
-    """
-    data = {
-        'title': 'Test category',
-    }
+class TestCreateBoard:
+    url = reverse('goals:create-board')
 
-    response = client.post('/goals/board/create', data, format='json')
+    def test_create_board(self, auth_client, board_data):
+        """Test successful board creation"""
+        response = auth_client.post(self.url, data={'title': 'Test board'})
 
-    assert response.data == {'detail': 'Authentication credentials were not provided.'}
-    assert response.status_code == 403
+        assert response.data == board_data()
+        assert response.status_code == status.HTTP_201_CREATED
+
+    def test_create_board_not_authenticated(self, client):
+        """Request without authentication returns an error"""
+        response = client.post(self.url, data={'title': 'Test category'})
+
+        assert response.data == {'detail': 'Authentication credentials were not provided.'}
+        assert response.status_code == status.HTTP_403_FORBIDDEN

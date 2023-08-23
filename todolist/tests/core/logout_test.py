@@ -1,16 +1,15 @@
 import pytest
-from tests.factories import UserFactory, USER_PASSWORD
+from django.urls import reverse
+from rest_framework import status
 
 
 @pytest.mark.django_db
-def test_logout(client, user: UserFactory):
-    """
-    Test successfully logging out
-    """
-    client.login(username=user.username, password=USER_PASSWORD)
+def test_logout(auth_client):
+    """User successfully logs out"""
+    url = reverse('core:profile')
 
-    logout_response = client.delete('/core/profile')
-    second_response = client.delete('/core/profile')
+    logout_response = auth_client.delete(url)
+    second_response = auth_client.delete(url)
 
-    assert logout_response.status_code == 204
-    assert second_response.status_code == 403
+    assert logout_response.status_code == status.HTTP_204_NO_CONTENT
+    assert second_response.status_code == status.HTTP_403_FORBIDDEN

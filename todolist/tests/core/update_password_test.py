@@ -1,62 +1,43 @@
 import pytest
-from tests.factories import UserFactory, USER_PASSWORD
+from django.urls import reverse
+from rest_framework import status
+
+from core.models import User
+from tests.factories import USER_PASSWORD
 
 
 @pytest.mark.django_db
-def test_update_password(client, user: UserFactory):
-    """
-    Test successful password update
-    """
-    client.login(username=user.username, password=USER_PASSWORD)
+class TestRetrieveProfile:
+    url = reverse('core:update-password')
+    login_url = reverse('core:login')
 
-    new_password = USER_PASSWORD + '1'
-    data = {
-        'old_password': USER_PASSWORD,
-        'new_password': new_password,
-    }
+    def test_success(self, auth_client, client, user: User):
+        """Test successful password update"""
+        new_password = USER_PASSWORD + '1'
+        data = {'old_password': USER_PASSWORD, 'new_password': new_password}
 
-    update_response = client.patch('/core/update_password', data, content_type='application/json')
-    login_response = client.post(
-        '/core/login',
-        {'username': user.username, 'password': new_password},
-        content_type='application/json',
-    )
+        update_response = auth_client.patch(self.url, data)
+        login_response = client.post(self.login_url, data={'username': user.username, 'password': new_password})
 
-    assert update_response.status_code == 200
-    assert login_response.status_code == 200
+        assert update_response.status_code == status.HTTP_200_OK
+        assert login_response.status_code == status.HTTP_200_OK
 
+    def test_incorrect_old_password(self, auth_client, user: User):
+        """Request with incorrect old password returns an error"""
+        new_password = USER_PASSWORD + '1'
+        data = {'old_password': new_password, 'new_password': new_password}
 
-@pytest.mark.django_db
-def test_update_password_incorrect_old(client, user: UserFactory):
-    """
-    Test password update with incorrect old password
-    """
-    client.login(username=user.username, password=USER_PASSWORD)
+        response = auth_client.patch(self.url, data)
 
-    new_password = USER_PASSWORD + '1'
-    data = {
-        'old_password': new_password,
-        'new_password': new_password,
-    }
+        assert response.data == {'old_password': ['Old password is incorrect']}
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    response = client.patch('/core/update_password', data, content_type='application/json')
+    def test_update_password_unauthorized(self, client, user: User):
+        """Request without authentication returns an error"""
+        new_password = USER_PASSWORD + '1'
+        data = {'old_password': USER_PASSWORD, 'new_password': new_password}
 
-    assert response.data == {'old_password': ['Old password is incorrect']}
-    assert response.status_code == 400
+        response = client.patch('/core/update_password', data)
 
-
-@pytest.mark.django_db
-def test_update_password_unauthorized(client, user: UserFactory):
-    """
-    Test password update without authorization
-    """
-    new_password = USER_PASSWORD + '1'
-    data = {
-        'old_password': USER_PASSWORD,
-        'new_password': new_password,
-    }
-
-    response = client.patch('/core/update_password', data, content_type='application/json')
-
-    assert response.data == {'detail': 'Authentication credentials were not provided.'}
-    assert response.status_code == 403
+        assert response.data == {'detail': 'Authentication credentials were not provided.'}
+        assert response.status_code == status.HTTP_403_FORBIDDEN

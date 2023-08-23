@@ -1,29 +1,44 @@
 import pytest
-from goals.models import Board, BoardParticipant
-from tests.factories import UserFactory, USER_PASSWORD, GoalCategoryFactory
+from django.urls import reverse
+from rest_framework import status
+from unittest.mock import ANY
+
+from core.models import User
+from goals.models import BoardParticipant
 
 
 @pytest.mark.django_db
-def test_list_category(client, user: UserFactory, board: Board, board_participant: BoardParticipant):
-    """
-    Test successfully getting paginated category list
-    """
-    client.login(username=user.username, password=USER_PASSWORD)
+class TestListCategory:
+    url = reverse('goals:category-list')
 
-    category_count = 5
+    def test_pagination(
+            self, auth_client, user: User,  board_participant: BoardParticipant, goal_category_factory
+    ):
+        """Pagination works correctly"""
+        category_count = 5
+        goal_category_factory.create_batch(size=category_count, user=user, board=board_participant.board)
+        expected_response = {
+            'count': category_count,
+            'next': None,
+            'previous': None,
+            'results': ANY,
+        }
 
-    GoalCategoryFactory.create_batch(category_count, user=user, board=board)
-    GoalCategoryFactory.create_batch(1, user=user, is_deleted=True)
+        response = auth_client.get(reverse('goals:category-list'), data={'limit': 10})
 
-    expected_response = {
-        'count': category_count,
-        'next': None,
-        'previous': None,
-    }
+        assert response.data == expected_response
+        assert response.status_code == status.HTTP_200_OK
 
-    response = client.get('/goals/goal_category/list?limit=10')
-    results = response.data.pop('results')
+    def test_deleted_not_shown(
+            self, auth_client, user: User,  board_participant: BoardParticipant, goal_category_factory
+    ):
+        """Deleted categories are not shown"""
+        category_count = 5
+        goal_category_factory.create_batch(size=category_count, user=user, board=board_participant.board)
+        goal_category_factory.create(user=user, is_deleted=True)
 
-    assert response.data == expected_response
-    assert len(results) == category_count
-    assert response.status_code == 200
+        response = auth_client.get(reverse('goals:category-list'), data={'limit': 10})
+        results = response.data.pop('results')
+
+        assert len(results) == category_count
+        assert not any([cat['is_deleted'] for cat in results])

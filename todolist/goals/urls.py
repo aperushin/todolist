@@ -2,6 +2,7 @@ from django.urls import path
 
 from goals.views import category, goal, comment, board
 
+app_name = 'goals'
 
 urlpatterns = [
     # Category views
