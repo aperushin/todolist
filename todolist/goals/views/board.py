@@ -23,6 +23,9 @@ class BoardCreateView(CreateAPIView):
 
 
 class BoardListView(ListAPIView):
+    """
+    Return a list of all active boards with the requesting user as the board's participant
+    """
     permission_classes: tuple[BasePermission, ...] = (IsAuthenticated,)
     serializer_class: BaseSerializer = BoardCreateSerializer
     filter_backends: tuple[BaseFilterBackend, ...] = (OrderingFilter, )
