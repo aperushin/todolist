@@ -47,7 +47,7 @@ services:
     command: python /code/todolist/manage.py collectstatic -c --no-input
 
   frontend:
-    image: sermalenk/skypro-front:lesson-38
+    image: aperushin/todolist-front:latest
     depends_on:
       api:
         condition: service_started
