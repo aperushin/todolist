@@ -18,8 +18,8 @@ $ cd todolist
 
 Create and activate virtual environment:
 ```sh
-$ python -m venv .
-$ source .venv/bin/activate
+$ python -m venv venv
+$ source venv/bin/activate
 ```
 
 Install Poetry and project requirements:
