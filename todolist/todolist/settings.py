@@ -152,7 +152,7 @@ SOCIAL_AUTH_USER_MODEL = 'core.User'
 
 # Telegram bot
 
-TELEGRAM_BOT_TOKEN = env('TELEGRAM_BOT_TOKEN')
+TELEGRAM_BOT_TOKEN = env('TELEGRAM_BOT_TOKEN', default='')
 
 # Length of a verification code used to verify a telegram user
 VERIFICATION_CODE_LENGTH = 6
